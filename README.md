@@ -20,7 +20,7 @@ L'application permet de:
 - Consulter le stock BNGRC
 - Inserer des dons
 - Inserer des besoins (par ville)
-- Simuler et valider la distribution des dons (priorite date ASC puis idBesoin ASC)
+- Simuler et valider la distribution des dons (workflow en 2 boutons: Simuler puis Valider, priorite date ASC puis idBesoin ASC)
 - Dashboard avec:
   - resume besoins par ville
   - resume dons recus
@@ -141,6 +141,9 @@ Executer dans cet ordre:
 - **Ordre de distribution**:
   - `besoins.status = 'non_dispatche'`
   - tri `date ASC`, puis `idBesoin ASC`
+- **Simulation (bouton Simuler)**:
+  - calcule le resultat theorique de dispatch
+  - ne modifie pas la base de donnees
 - **Distribution complete**:
   - decrement stock
   - insertion `MvtStock(typeMvt='distribution')`
@@ -157,6 +160,7 @@ Definies dans `app/config/routes.php`.
 
 - `GET /` -> redirection vers `/distribution`
 - `GET /distribution`
+- `POST /distribution/simuler`
 - `POST /distribution/valider`
 - `GET /stock/initialisation`
 - `POST /stock/initialisation`
@@ -231,6 +235,9 @@ Utiliser cet override si l'hebergement produit des URLs incorrectes.
   - bouton "Voir details" par ligne
   - lightbox sur la zone contenu (hors sidebar)
   - script: `assets/js/dashboard-details.js`
+- Distribution:
+  - bouton `Simuler` pour afficher la projection
+  - bouton `Valider le dispatch` pour appliquer les mouvements reels
 
 ## 11) Securite HTTP
 
