@@ -113,5 +113,9 @@ $menus = [
         nonce="<?= $echapper($nonceCsp) ?>"
         src="<?= $echapper(BASE_URL . 'assets/js/theme.js') ?>"
     ></script>
+    <script
+        nonce="<?= $echapper($nonceCsp) ?>"
+        src="<?= $echapper(BASE_URL . 'assets/js/select-personnalise.js') ?>"
+    ></script>
 </body>
 </html>

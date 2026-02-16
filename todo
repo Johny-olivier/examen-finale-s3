@@ -1,86 +1,238 @@
+[OK] Base de donnee globale BNGRC
+    [OK] Base de donnee
+            - script sql/16022026-01-schema.sql
+            - table regions (idRegion, nom)
+            - table ville (idVille, idRegion, nom)
+            - table categories (idCategorie, nom)
+            - table produit (idProduit, nom, idCategorie, prixUnitaire)
+            - table unite (idUnite, nom)
+            - table besoins (idBesoin, idVille, idProduit, quantite, idUnite, status, date)
+            - table dons (idDon, idProduit, idUnite, quantite, donateur, dateDon)
+            - table StockBNGRC (idStock, idProduit, idUnite, quantite)
+            - table MvtStock (idMvt, typeMvt, idProduit, idUnite, quantite, dateMvt)
+            - index idx_besoins_status_date_id
+    [OK] Donnees initiales / test
+            - script sql/16022026-02-init-data.sql (Atsinanana/Boeny, Toamasina/Majunga)
+            - script sql/16022026-03-test-data-distribution.sql
+            - script sql/16022026-04-select.sql
+    [OK] php
+            - bootstrap DB via Flight::db() dans app/config/services.php
+    [OK] js
+            - aucun
 
+[OK] Ajouter Stock BNGRC
+    [OK] Base de donnee
+            - table StockBNGRC (idStock, idProduit, idUnite, quantite)
+            - table MvtStock (typeMvt='don' lors de l'initialisation)
+    [OK] Affichage
+            - page app/views/stock/initialisation.php
+                + formulaire (id_produit, id_unite, quantite)
+                + recap lignes de stock
+                + recap quantite totale
+                + messages succes/erreur
+    [OK] php
+            - repository
+                + app/repositories/StockRepository.php
+                    * obtenirProduits(): array
+                    * obtenirUnites(): array
+                    * obtenirStockDetaille(): array
+                    * obtenirStockVerrouille(int, int): array
+                    * insererStock(int, int, float): void
+                    * incrementerStock(int, float): void
+                    * insererMouvementDon(int, int, float): void
+                    * demarrerTransaction(): void
+                    * validerTransaction(): void
+                    * annulerTransaction(): void
+                    * estEnTransaction(): bool
+            - service
+                + app/services/StockService.php
+                    * obtenirDonneesInitialisation(): array
+                    * ajouterStockInitial(int, int, float): array
+                    * obtenirDonneesConsultation(): array
+                    * construireResumeStock(array): array
+            - controller
+                + app/controllers/StockController.php
+                    * afficherPageInitialisation(): void
+                    * enregistrerInitialisation(): void
+    [OK] js
+            - aucun metier
 
-1) BASE DE DONNÉES
+[OK] Consultation du stock
+    [OK] Base de donnee
+            - lecture table StockBNGRC + produit + unite
+    [OK] Affichage
+            - page app/views/stock/consultation.php
+                + tableau idProduit / produit / unite / quantite disponible
+                + recap global lignes et quantite
+    [OK] php
+            - controller app/controllers/StockController.php
+                * afficherPageConsultation(): void
+            - service app/services/StockService.php
+                * obtenirDonneesConsultation(): array
+            - repository app/repositories/StockRepository.php
+                * obtenirStockDetaille(): array
+    [OK] js
+            - aucun
 
-1.1 Création des tables principales
+[OK] Insertion des dons
+    [OK] Base de donnee
+            - table dons (insertion don)
+            - table StockBNGRC (maj quantite)
+            - table MvtStock (typeMvt='don')
+    [OK] Affichage
+            - page app/views/dons/index.php
+                + formulaire (produit, unite, quantite, donateur, date_don)
+                + historique dons recents
+                + recap total dons / quantite
+    [OK] php
+            - repository
+                + app/repositories/DonRepository.php
+                    * obtenirProduits(): array
+                    * obtenirUnites(): array
+                    * obtenirDonsRecents(): array
+                    * obtenirStockVerrouille(int, int): array
+                    * insererStock(int, int, float): void
+                    * incrementerStock(int, float): void
+                    * insererDon(int, int, float, string, ?string): void
+                    * insererMouvementDon(int, int, float): void
+                    * demarrerTransaction(): void
+                    * validerTransaction(): void
+                    * annulerTransaction(): void
+                    * estEnTransaction(): bool
+            - service
+                + app/services/DonService.php
+                    * obtenirDonneesPage(): array
+                    * insererDon(int, int, float, string, ?string): void
+                    * construireResume(array): array
+            - controller
+                + app/controllers/DonController.php
+                    * afficherPageDons(): void
+                    * enregistrerDon(): void
+    [OK] js
+            - aucun metier
 
-- regions
-    * idRegion (PK)
-    * nom
+[OK] Insertion des besoins (par ville)
+    [OK] Base de donnee
+            - table besoins (status='non_dispatche' par defaut)
+            - liaison ville/region/produit/unite
+    [OK] Affichage
+            - page app/views/besoins/index.php
+                + formulaire insertion besoin
+                + filtre par ville
+                + liste des besoins saisis (status, date, montant estime)
+                + recap total/dispatches/non dispatches
+    [OK] php
+            - repository
+                + app/repositories/BesoinRepository.php
+                    * obtenirVilles(): array
+                    * obtenirProduits(): array
+                    * obtenirUnites(): array
+                    * obtenirBesoins(?int): array
+                    * insererBesoin(int, int, float, int, ?string): void
+            - service
+                + app/services/BesoinService.php
+                    * obtenirDonneesPage(?int): array
+                    * insererBesoin(int, int, float, int, ?string): void
+                    * construireResume(array): array
+            - controller
+                + app/controllers/BesoinController.php
+                    * afficherPageBesoins(): void
+                    * enregistrerBesoin(): void
+    [OK] js
+            - aucun metier
 
-- ville
-    * idVille (PK)
-    * idRegion (FK -> regions.idRegion)
-    * nom
+[OK] Distribution des dons
+    [OK] Base de donnee
+            - lecture besoins status='non_dispatche' ordonnes par date ASC puis idBesoin ASC
+            - decrement StockBNGRC lors validation
+            - insertion MvtStock typeMvt='distribution'
+            - update besoins (status='dispatche' ou quantite restante)
+    [OK] Affichage
+            - page app/views/distribution/index.php
+                + simulation de dispatch avant validation
+                + tableau detail des besoins
+                + projection du stock apres simulation
+                + bouton valider dispatch
+    [OK] php
+            - repository
+                + app/repositories/DistributionRepository.php
+                    * obtenirBesoinsNonDispatcheParPriorite(): array
+                    * obtenirStockAvecLibelles(): array
+                    * obtenirStockVerrouille(int, int): array
+                    * decrementerStock(int, float): void
+                    * enregistrerMouvementDistribution(int, int, float): void
+                    * marquerBesoinDispatche(int): void
+                    * mettreAJourQuantiteBesoin(int, float): void
+                    * demarrerTransaction(): void
+                    * validerTransaction(): void
+                    * annulerTransaction(): void
+                    * estEnTransaction(): bool
+            - service
+                + app/services/DistributionService.php
+                    * simulerDistribution(): array
+                    * validerDistribution(): array
+                    * genererCleStock(int, int): string
+            - controller
+                + app/controllers/DistributionController.php
+                    * afficherPageDistribution(): void
+                    * validerDistribution(): void
+    [OK] js
+            - aucun metier
 
-- categories
-    * idCategorie (PK)
-    * nom
+[OK] Dashboard (resume + details par ville)
+    [OK] Base de donnee
+            - resume besoins par ville
+            - resume dons recus
+            - resume distributions par ville
+            - etat global stock
+            - details besoins par ville (liste)
+            - details dons distribues par ville (liste basee sur status dispatche)
+    [OK] Affichage
+            - page app/views/dashboard/index.php
+                + cartes indicateurs
+                + 4 tableaux de synthese
+                + bouton "Voir details" par ville
+                + lightbox detail (colonne besoins / colonne dons distribues)
+    [OK] php
+            - repository
+                + app/repositories/DashboardRepository.php
+                    * obtenirResumeBesoinsParVille(): array
+                    * obtenirResumeDonsRecus(): array
+                    * obtenirResumeDistributionsParVille(): array
+                    * obtenirEtatGlobalStock(): array
+                    * obtenirDetailsBesoinsParVille(): array
+                    * obtenirDetailsDistributionsParVille(): array
+            - service
+                + app/services/DashboardService.php
+                    * obtenirDonneesDashboard(): array
+                    * sommeValeurs(array, string): float
+                    * construireDetailsParVille(array, array, array): array
+            - controller
+                + app/controllers/DashboardController.php
+                    * afficherDashboard(): void
+    [OK] js
+            - assets/js/dashboard-details.js
+                + ouverture/fermeture lightbox
+                + injection template ville
+                + fermeture clic exterieur + touche Escape
 
-- produit
-    * idProduit (PK)
-    * nom
-    * idCategorie (FK -> categories.idCategorie)
-    * prixUnitaire
-
-- unite
-    * idUnite (PK)
-    * nom
-
-- besoins
-    * idBesoin (PK)
-    * idVille (FK -> ville.idVille)
-    * idProduit (FK -> produit.idProduit)
-    * quantite
-    * idUnite (FK -> unite.idUnite)
-    * status (dispatché / non dispatché)
-
-- dons
-    * idDon (PK)
-    * idProduit (FK -> produit.idProduit)
-    * idUnite (FK -> unite.idUnite)
-    * idVille (FK -> ville.idVille)
-    * donateur (personne / organisation)
-
-- StockBNGRC
-    * idStock (PK)
-    * idProduit (FK -> produit.idProduit)
-    * quantite
-    * idUnite (FK -> unite.idUnite)
-
-- MvtStock
-    * idMvt (PK)
-    * typeMvt (don / distribution)
-    * idProduit (FK -> produit.idProduit)
-    * quantite
-    * idUnite (FK -> unite.idUnite)
-    * dateMvt
-
-
-2) AFFICHAGES / PAGES
-
-2.1 Pages de gestion
-
-- Page ajouter Stock BNGRC
-- Page d'insertion des dons
-- Page d'insertion des besoins (par ville)
-- Page de distribution des dons
-- Page de consultation du stock (idProduit, quantité disponible)
-
-2.2 Dashboard
-
-- Création d’une page Dashboard
-    * Résumé des besoins par ville
-    * Résumé des dons reçus
-    * Résumé des dons distribués par ville
-    * État global du stock
-
-
-3) ARCHITECTURE MVC
-
-- Mise en place de la structure MVC
-    * Models (gestion base de données)
-    * Controllers (logique métier)
-    * Views (interfaces utilisateurs)
-
+[OK] UI globale moderne + mode dark/light
+    [OK] Affichage
+            - layout unique app/views/layout.php
+                + sidebar navigation
+                + header global
+                + bouton switch theme
+            - style global assets/css/app.css
+                + design light moderne
+                + mode dark complet
+                + correction contraste titres/formulaires/tableaux
+                + lightbox centree sur zone contenu (hors sidebar)
+    [OK] php
+            - routes centralisees app/config/routes.php
+            - gestion BASE_URL app/config/constant.php
+    [OK] js
+            - assets/js/theme.js
+                + detect theme systeme
+                + persistence localStorage
+                + toggle clair/sombre
 
