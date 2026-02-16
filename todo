@@ -149,11 +149,17 @@
             - update besoins (status='dispatche' ou quantite restante)
     [OK] Affichage
             - page app/views/distribution/index.php
+                + etat initial "simulation non lancee"
+                + bouton simuler (sans impact base)
                 + simulation de dispatch avant validation
                 + tableau detail des besoins
                 + projection du stock apres simulation
-                + bouton valider dispatch
+                + bouton valider dispatch (application reelle)
     [OK] php
+            - routes app/config/routes.php
+                * GET /distribution
+                * POST /distribution/simuler
+                * POST /distribution/valider
             - repository
                 + app/repositories/DistributionRepository.php
                     * obtenirBesoinsNonDispatcheParPriorite(): array
@@ -175,6 +181,7 @@
             - controller
                 + app/controllers/DistributionController.php
                     * afficherPageDistribution(): void
+                    * simulerDistribution(): void
                     * validerDistribution(): void
     [OK] js
             - aucun metier
@@ -235,4 +242,3 @@
                 + detect theme systeme
                 + persistence localStorage
                 + toggle clair/sombre
-

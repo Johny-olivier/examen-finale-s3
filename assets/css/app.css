@@ -451,7 +451,7 @@ body.app-page::before {
 .btn-dispatch {
     border: none;
     border-radius: 12px;
-    padding: 0.67rem 1.05rem;
+    padding: 0.5rem 1.05rem;
     font-weight: 680;
     background: linear-gradient(125deg, var(--accent-primaire), var(--accent-info));
     color: #ffffff;
