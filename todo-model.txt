@@ -1,0 +1,24 @@
+[en cours ...] Ajouter Stock BNGRC
+    [OK] Base de donné
+            - tel table (col, col, col)
+            - tel table (col, col, col)
+            - tel table (col, col, col)
+    [OK]  Affichage
+            - tel page
+                + ...
+                + ...
+                + ...
+            - tel page
+                + ...
+                + ...
+                + ...
+    [OK]  php
+            - repository 
+                + Fichier
+                    * fonction (param, param) : return
+                    * fonction (param, param) : return
+                    * fonction (param, param) : return
+            ...
+        js
+        ..
+        
