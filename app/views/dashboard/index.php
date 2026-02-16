@@ -26,6 +26,7 @@ $resumeBesoinsParVille = $donnees['resume_besoins_par_ville'] ?? [];
 $resumeDonsRecus = $donnees['resume_dons_recus'] ?? [];
 $resumeDistributionsParVille = $donnees['resume_distributions_par_ville'] ?? [];
 $etatGlobalStock = $donnees['etat_global_stock'] ?? [];
+$detailsParVille = $donnees['details_par_ville'] ?? [];
 ?>
 
 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 mb-4">
@@ -96,10 +97,15 @@ $etatGlobalStock = $donnees['etat_global_stock'] ?? [];
                     <th class="text-end">Dispatches</th>
                     <th class="text-end">Non dispatches</th>
                     <th class="text-end">Quantite restante</th>
+                    <th class="text-center">Details</th>
                 </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($resumeBesoinsParVille as $ligne): ?>
+                    <?php
+                    $idVille = (int) ($ligne['idVille'] ?? 0);
+                    $libelleVille = trim((string) ($ligne['region'] ?? '') . ' - ' . (string) ($ligne['ville'] ?? ''));
+                    ?>
                     <tr>
                         <td><?= $echapper($ligne['region'] ?? '') ?></td>
                         <td class="fw-semibold"><?= $echapper($ligne['ville'] ?? '') ?></td>
@@ -107,6 +113,16 @@ $etatGlobalStock = $donnees['etat_global_stock'] ?? [];
                         <td class="text-end"><?= (int) ($ligne['total_dispatche'] ?? 0) ?></td>
                         <td class="text-end"><?= (int) ($ligne['total_non_dispatche'] ?? 0) ?></td>
                         <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite_restante'] ?? 0)) ?></td>
+                        <td class="text-center">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary bouton-voir-details-ville"
+                                data-id-ville="<?= $idVille ?>"
+                                data-libelle-ville="<?= $echapper($libelleVille) ?>"
+                            >
+                                Voir details
+                            </button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -114,6 +130,115 @@ $etatGlobalStock = $donnees['etat_global_stock'] ?? [];
         </div>
     <?php endif; ?>
 </section>
+
+<div id="lightbox-details-ville" class="lightbox-dashboard" hidden>
+    <div class="lightbox-dialogue" role="dialog" aria-modal="true" aria-labelledby="titre-lightbox-ville">
+        <div class="lightbox-entete">
+            <h3 class="lightbox-titre mb-0" id="titre-lightbox-ville">Details ville</h3>
+            <button type="button" class="lightbox-fermer" data-fermer-lightbox aria-label="Fermer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="lightbox-contenu p-3 p-lg-4" id="contenu-lightbox-ville"></div>
+    </div>
+</div>
+
+<?php foreach ($detailsParVille as $idVille => $detailVille): ?>
+    <?php
+    $besoinsVille = $detailVille['besoins'] ?? [];
+    $donsDistribuesVille = $detailVille['dons_distribues'] ?? [];
+    $regionVille = (string) ($detailVille['region'] ?? '');
+    $nomVille = (string) ($detailVille['ville'] ?? '');
+    ?>
+    <template id="template-ville-<?= (int) $idVille ?>">
+        <div class="lightbox-intro mb-3">
+            <span class="badge text-bg-light me-2"><?= $echapper($regionVille) ?></span>
+            <span class="fw-semibold"><?= $echapper($nomVille) ?></span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <section class="lightbox-section h-100">
+                    <h4 class="lightbox-section-titre">Besoins de la ville</h4>
+                    <?php if (count($besoinsVille) === 0): ?>
+                        <p class="text-secondary mb-0">Aucun besoin saisi pour cette ville.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Produit</th>
+                                    <th class="text-end">Quantite</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($besoinsVille as $besoin): ?>
+                                    <?php
+                                    $statusBesoin = (string) ($besoin['status'] ?? '');
+                                    $classeBadge = $statusBesoin === 'dispatche' ? 'text-bg-success' : 'text-bg-warning';
+                                    $libelleStatus = $statusBesoin === 'dispatche' ? 'Dispatche' : 'Non dispatche';
+                                    ?>
+                                    <tr>
+                                        <td><?= (int) ($besoin['idBesoin'] ?? 0) ?></td>
+                                        <td>
+                                            <div class="fw-semibold"><?= $echapper($besoin['produit'] ?? '') ?></div>
+                                            <small class="text-secondary"><?= $echapper($besoin['unite'] ?? '') ?></small>
+                                        </td>
+                                        <td class="text-end"><?= $formaterNombre((float) ($besoin['quantite'] ?? 0)) ?></td>
+                                        <td><span class="badge <?= $echapper($classeBadge) ?>"><?= $echapper($libelleStatus) ?></span></td>
+                                        <td><?= $echapper($formaterDate($besoin['date'] ?? '')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </section>
+            </div>
+
+            <div class="col-lg-6">
+                <section class="lightbox-section h-100">
+                    <h4 class="lightbox-section-titre">Dons distribues a la ville</h4>
+                    <p class="text-secondary small">
+                        Base sur les besoins marques <strong>dispatche</strong>.
+                    </p>
+                    <?php if (count($donsDistribuesVille) === 0): ?>
+                        <p class="text-secondary mb-0">Aucune distribution validee pour cette ville.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Produit</th>
+                                    <th class="text-end">Quantite distribuee</th>
+                                    <th>Date reference</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($donsDistribuesVille as $distribution): ?>
+                                    <tr>
+                                        <td><?= (int) ($distribution['idBesoin'] ?? 0) ?></td>
+                                        <td>
+                                            <div class="fw-semibold"><?= $echapper($distribution['produit'] ?? '') ?></div>
+                                            <small class="text-secondary"><?= $echapper($distribution['unite'] ?? '') ?></small>
+                                        </td>
+                                        <td class="text-end"><?= $formaterNombre((float) ($distribution['quantite'] ?? 0)) ?></td>
+                                        <td><?= $echapper($formaterDate($distribution['date'] ?? '')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </section>
+            </div>
+        </div>
+    </template>
+<?php endforeach; ?>
 
 <section class="section-card mb-4">
     <div class="section-card-header">
@@ -153,6 +278,11 @@ $etatGlobalStock = $donnees['etat_global_stock'] ?? [];
         </div>
     <?php endif; ?>
 </section>
+
+<script
+    nonce="<?= $echapper((string) \Flight::get('csp_nonce')) ?>"
+    src="<?= $echapper(BASE_URL . 'assets/js/dashboard-details.js') ?>"
+></script>
 
 <section class="section-card mb-4">
     <div class="section-card-header">

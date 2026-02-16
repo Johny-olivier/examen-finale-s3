@@ -5,6 +5,7 @@ $echapper = static function ($valeur): string {
 
 $titrePage = $title ?? 'Application BNGRC';
 $menuActif = $menu_actif ?? '';
+$nonceCsp = (string) \Flight::get('csp_nonce');
 
 $menus = [
     [
@@ -82,10 +83,22 @@ $menus = [
         <main class="app-main">
             <header class="app-main-header">
                 <h2 class="mb-0"><?= $echapper($titrePage) ?></h2>
-                <span class="header-pill">
-                    <i class="fa-solid fa-bolt me-1"></i>
-                    BNGRC
-                </span>
+                <div class="header-actions">
+                    <button
+                        type="button"
+                        id="bouton-theme"
+                        class="btn-theme-toggle"
+                        aria-pressed="false"
+                        aria-label="Changer de theme"
+                    >
+                        <i class="fa-solid fa-moon"></i>
+                        <span>Mode sombre</span>
+                    </button>
+                    <span class="header-pill">
+                        <i class="fa-solid fa-bolt me-1"></i>
+                        BNGRC
+                    </span>
+                </div>
             </header>
 
             <section class="app-content card border-0 shadow-sm">
@@ -95,5 +108,10 @@ $menus = [
             </section>
         </main>
     </div>
+
+    <script
+        nonce="<?= $echapper($nonceCsp) ?>"
+        src="<?= $echapper(BASE_URL . 'assets/js/theme.js') ?>"
+    ></script>
 </body>
 </html>

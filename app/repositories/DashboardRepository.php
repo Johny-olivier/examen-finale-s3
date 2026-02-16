@@ -21,6 +21,7 @@ class DashboardRepository
     {
         return $this->baseDeDonnees->fetchAll(
             "SELECT
+                v.idVille,
                 r.nom AS region,
                 v.nom AS ville,
                 COUNT(b.idBesoin) AS total_besoins,
@@ -30,7 +31,7 @@ class DashboardRepository
             FROM ville v
             JOIN regions r ON r.idRegion = v.idRegion
             LEFT JOIN besoins b ON b.idVille = v.idVille
-            GROUP BY r.nom, v.nom
+            GROUP BY v.idVille, r.nom, v.nom
             ORDER BY r.nom ASC, v.nom ASC"
         );
     }
@@ -91,6 +92,56 @@ class DashboardRepository
             JOIN produit p ON p.idProduit = s.idProduit
             JOIN unite u ON u.idUnite = s.idUnite
             ORDER BY p.nom ASC, u.nom ASC"
+        );
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    public function obtenirDetailsBesoinsParVille(): array
+    {
+        return $this->baseDeDonnees->fetchAll(
+            "SELECT
+                b.idBesoin,
+                b.idVille,
+                r.nom AS region,
+                v.nom AS ville,
+                p.nom AS produit,
+                u.nom AS unite,
+                b.quantite,
+                b.status,
+                b.date
+            FROM besoins b
+            JOIN ville v ON v.idVille = b.idVille
+            JOIN regions r ON r.idRegion = v.idRegion
+            JOIN produit p ON p.idProduit = b.idProduit
+            JOIN unite u ON u.idUnite = b.idUnite
+            ORDER BY v.idVille ASC, b.date DESC, b.idBesoin DESC"
+        );
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    public function obtenirDetailsDistributionsParVille(): array
+    {
+        return $this->baseDeDonnees->fetchAll(
+            "SELECT
+                b.idBesoin,
+                b.idVille,
+                r.nom AS region,
+                v.nom AS ville,
+                p.nom AS produit,
+                u.nom AS unite,
+                b.quantite,
+                b.date
+            FROM besoins b
+            JOIN ville v ON v.idVille = b.idVille
+            JOIN regions r ON r.idRegion = v.idRegion
+            JOIN produit p ON p.idProduit = b.idProduit
+            JOIN unite u ON u.idUnite = b.idUnite
+            WHERE b.status = 'dispatche'
+            ORDER BY v.idVille ASC, b.date DESC, b.idBesoin DESC"
         );
     }
 }
