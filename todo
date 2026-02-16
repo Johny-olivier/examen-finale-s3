@@ -1,0 +1,86 @@
+
+
+1) BASE DE DONNÉES
+
+1.1 Création des tables principales
+
+- regions
+    * idRegion (PK)
+    * nom
+
+- ville
+    * idVille (PK)
+    * idRegion (FK -> regions.idRegion)
+    * nom
+
+- categories
+    * idCategorie (PK)
+    * nom
+
+- produit
+    * idProduit (PK)
+    * nom
+    * idCategorie (FK -> categories.idCategorie)
+    * prixUnitaire
+
+- unite
+    * idUnite (PK)
+    * nom
+
+- besoins
+    * idBesoin (PK)
+    * idVille (FK -> ville.idVille)
+    * idProduit (FK -> produit.idProduit)
+    * quantite
+    * idUnite (FK -> unite.idUnite)
+    * status (dispatché / non dispatché)
+
+- dons
+    * idDon (PK)
+    * idProduit (FK -> produit.idProduit)
+    * idUnite (FK -> unite.idUnite)
+    * idVille (FK -> ville.idVille)
+    * donateur (personne / organisation)
+
+- StockBNGRC
+    * idStock (PK)
+    * idProduit (FK -> produit.idProduit)
+    * quantite
+    * idUnite (FK -> unite.idUnite)
+
+- MvtStock
+    * idMvt (PK)
+    * typeMvt (don / distribution)
+    * idProduit (FK -> produit.idProduit)
+    * quantite
+    * idUnite (FK -> unite.idUnite)
+    * dateMvt
+
+
+2) AFFICHAGES / PAGES
+
+2.1 Pages de gestion
+
+- Page ajouter Stock BNGRC
+- Page d'insertion des dons
+- Page d'insertion des besoins (par ville)
+- Page de distribution des dons
+- Page de consultation du stock (idProduit, quantité disponible)
+
+2.2 Dashboard
+
+- Création d’une page Dashboard
+    * Résumé des besoins par ville
+    * Résumé des dons reçus
+    * Résumé des dons distribués par ville
+    * État global du stock
+
+
+3) ARCHITECTURE MVC
+
+- Mise en place de la structure MVC
+    * Models (gestion base de données)
+    * Controllers (logique métier)
+    * Views (interfaces utilisateurs)
+
+
