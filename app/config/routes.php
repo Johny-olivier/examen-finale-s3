@@ -23,6 +23,7 @@ $router->group('', function (Router $router) {
     });
 
     $router->get('/distribution', [$controleurDistribution, 'afficherPageDistribution']);
+    $router->post('/distribution/simuler', [$controleurDistribution, 'simulerDistribution']);
     $router->post('/distribution/valider', [$controleurDistribution, 'validerDistribution']);
 
     $router->get('/stock/initialisation', [$controleurStock, 'afficherPageInitialisation']);
