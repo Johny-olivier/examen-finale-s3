@@ -641,6 +641,8 @@ select.select-natif-cache {
     list-style: none;
     max-height: 250px;
     overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .select-personnalise-option {
@@ -685,6 +687,41 @@ select.select-natif-cache {
     border-color: color-mix(in srgb, var(--accent-info) 64%, var(--accent-primaire) 36%);
     box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--accent-info) 18%, transparent);
     background: var(--fond-carte);
+}
+
+.simulation-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    width: auto;
+    max-width: none;
+}
+
+.simulation-actions-ligne {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    width: auto;
+    flex-wrap: wrap;
+}
+
+.simulation-form-mode {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.simulation-mode-champ {
+    width: min(250px, 100%);
+    min-width: 200px;
+}
+
+.simulation-form-reinit {
+    align-self: flex-start;
 }
 
 /* Lightbox dashboard */
@@ -1067,6 +1104,20 @@ body.lightbox-ouvert {
         right: 0.8rem;
         bottom: 0.8rem;
         left: 0.8rem;
+    }
+
+    .simulation-actions {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    .simulation-actions-ligne,
+    .simulation-form-mode {
+        justify-content: flex-start;
+    }
+
+    .simulation-form-reinit {
+        align-self: flex-start;
     }
 }
 

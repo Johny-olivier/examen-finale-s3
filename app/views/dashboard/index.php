@@ -1,26 +1,6 @@
 <?php
 /** @var array<string,mixed> $donnees */
 
-$echapper = static function ($valeur): string {
-    return htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
-};
-
-$formaterNombre = static function (float $valeur): string {
-    return number_format($valeur, 2, ',', ' ');
-};
-
-$formaterDate = static function ($valeur): string {
-    $date = (string) $valeur;
-    if ($date === '') {
-        return '-';
-    }
-    $horodatage = strtotime($date);
-    if ($horodatage === false) {
-        return $date;
-    }
-    return date('d/m/Y H:i', $horodatage);
-};
-
 $indicateurs = $donnees['indicateurs'] ?? [];
 $resumeBesoinsParVille = $donnees['resume_besoins_par_ville'] ?? [];
 $resumeDonsRecus = $donnees['resume_dons_recus'] ?? [];
@@ -60,19 +40,19 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
     <div class="col-sm-6 col-xl-2">
         <article class="stat-card stat-ok">
             <p class="stat-label">Qte dons recu</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($indicateurs['quantite_totale_dons_recus'] ?? 0)) ?></p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($indicateurs['quantite_totale_dons_recus'] ?? 0)) ?></p>
         </article>
     </div>
     <div class="col-sm-6 col-xl-2">
         <article class="stat-card stat-partiel">
-            <p class="stat-label">Qte distribuee</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($indicateurs['quantite_totale_distribuee'] ?? 0)) ?></p>
+            <p class="stat-label">Qte distribuee (hors argent)</p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($indicateurs['quantite_totale_distribuee'] ?? 0)) ?></p>
         </article>
     </div>
     <div class="col-sm-6 col-xl-2">
         <article class="stat-card stat-total">
             <p class="stat-label">Stock global</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($indicateurs['quantite_totale_stock'] ?? 0)) ?></p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($indicateurs['quantite_totale_stock'] ?? 0)) ?></p>
         </article>
     </div>
 </div>
@@ -94,7 +74,7 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                     <th>Region</th>
                     <th>Ville</th>
                     <th class="text-end">Total besoins</th>
-                    <th class="text-end">Dispatches</th>
+                    <th class="text-end">Traites</th>
                     <th class="text-end">Non dispatches</th>
                     <th class="text-end">Quantite restante</th>
                     <th class="text-center">Details</th>
@@ -107,18 +87,18 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                     $libelleVille = trim((string) ($ligne['region'] ?? '') . ' - ' . (string) ($ligne['ville'] ?? ''));
                     ?>
                     <tr>
-                        <td><?= $echapper($ligne['region'] ?? '') ?></td>
-                        <td class="fw-semibold"><?= $echapper($ligne['ville'] ?? '') ?></td>
+                        <td><?= vue_echapper($ligne['region'] ?? '') ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($ligne['ville'] ?? '') ?></td>
                         <td class="text-end"><?= (int) ($ligne['total_besoins'] ?? 0) ?></td>
                         <td class="text-end"><?= (int) ($ligne['total_dispatche'] ?? 0) ?></td>
                         <td class="text-end"><?= (int) ($ligne['total_non_dispatche'] ?? 0) ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite_restante'] ?? 0)) ?></td>
+                        <td class="text-end"><?= vue_formater_nombre((float) ($ligne['quantite_restante'] ?? 0)) ?></td>
                         <td class="text-center">
                             <button
                                 type="button"
                                 class="btn btn-sm btn-outline-primary bouton-voir-details-ville"
                                 data-id-ville="<?= $idVille ?>"
-                                data-libelle-ville="<?= $echapper($libelleVille) ?>"
+                                data-libelle-ville="<?= vue_echapper($libelleVille) ?>"
                             >
                                 Voir details
                             </button>
@@ -152,8 +132,8 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
     ?>
     <template id="template-ville-<?= (int) $idVille ?>">
         <div class="lightbox-intro mb-3">
-            <span class="badge text-bg-light me-2"><?= $echapper($regionVille) ?></span>
-            <span class="fw-semibold"><?= $echapper($nomVille) ?></span>
+            <span class="badge text-bg-light me-2"><?= vue_echapper($regionVille) ?></span>
+            <span class="fw-semibold"><?= vue_echapper($nomVille) ?></span>
         </div>
 
         <div class="row g-3">
@@ -178,18 +158,19 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                                 <?php foreach ($besoinsVille as $besoin): ?>
                                     <?php
                                     $statusBesoin = (string) ($besoin['status'] ?? '');
-                                    $classeBadge = $statusBesoin === 'dispatche' ? 'text-bg-success' : 'text-bg-warning';
-                                    $libelleStatus = $statusBesoin === 'dispatche' ? 'Dispatche' : 'Non dispatche';
+                                    $metaStatus = vue_meta_statut_besoin($statusBesoin);
+                                    $classeBadge = $metaStatus['classe'];
+                                    $libelleStatus = $metaStatus['libelle'];
                                     ?>
                                     <tr>
                                         <td><?= (int) ($besoin['idBesoin'] ?? 0) ?></td>
                                         <td>
-                                            <div class="fw-semibold"><?= $echapper($besoin['produit'] ?? '') ?></div>
-                                            <small class="text-secondary"><?= $echapper($besoin['unite'] ?? '') ?></small>
+                                            <div class="fw-semibold"><?= vue_echapper($besoin['produit'] ?? '') ?></div>
+                                            <small class="text-secondary"><?= vue_echapper($besoin['unite'] ?? '') ?></small>
                                         </td>
-                                        <td class="text-end"><?= $formaterNombre((float) ($besoin['quantite'] ?? 0)) ?></td>
-                                        <td><span class="badge <?= $echapper($classeBadge) ?>"><?= $echapper($libelleStatus) ?></span></td>
-                                        <td><?= $echapper($formaterDate($besoin['date'] ?? '')) ?></td>
+                                        <td class="text-end"><?= vue_formater_quantite((float) ($besoin['quantite'] ?? 0), (string) ($besoin['unite'] ?? '')) ?></td>
+                                        <td><span class="badge <?= vue_echapper($classeBadge) ?>"><?= vue_echapper($libelleStatus) ?></span></td>
+                                        <td><?= vue_echapper(vue_formater_date_humaine($besoin['date'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
@@ -201,33 +182,33 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
 
             <div class="col-lg-6">
                 <section class="lightbox-section h-100">
-                    <h4 class="lightbox-section-titre">Dons distribues a la ville</h4>
+                    <h4 class="lightbox-section-titre">Dons obtenus par la ville</h4>
                     <p class="text-secondary small">
-                        Base sur les besoins marques <strong>dispatche</strong>.
+                        Source: distributions manuelles + distributions issues de la simulation validee.
                     </p>
                     <?php if (count($donsDistribuesVille) === 0): ?>
-                        <p class="text-secondary mb-0">Aucune distribution validee pour cette ville.</p>
+                        <p class="text-secondary mb-0">Aucun don distribue pour cette ville.</p>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover align-middle mb-0">
                                 <thead>
                                 <tr>
-                                    <th>#</th>
+                                    <th># Dist</th>
                                     <th>Produit</th>
-                                    <th class="text-end">Quantite distribuee</th>
-                                    <th>Date reference</th>
+                                    <th class="text-end">Quantite obtenue</th>
+                                    <th>Date distribution</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 <?php foreach ($donsDistribuesVille as $distribution): ?>
                                     <tr>
-                                        <td><?= (int) ($distribution['idBesoin'] ?? 0) ?></td>
+                                        <td><?= (int) ($distribution['idDistribution'] ?? 0) ?></td>
                                         <td>
-                                            <div class="fw-semibold"><?= $echapper($distribution['produit'] ?? '') ?></div>
-                                            <small class="text-secondary"><?= $echapper($distribution['unite'] ?? '') ?></small>
+                                            <div class="fw-semibold"><?= vue_echapper($distribution['produit'] ?? '') ?></div>
+                                            <small class="text-secondary"><?= vue_echapper($distribution['unite'] ?? '') ?></small>
                                         </td>
-                                        <td class="text-end"><?= $formaterNombre((float) ($distribution['quantite'] ?? 0)) ?></td>
-                                        <td><?= $echapper($formaterDate($distribution['date'] ?? '')) ?></td>
+                                        <td class="text-end"><?= vue_formater_quantite((float) ($distribution['quantite'] ?? 0), (string) ($distribution['unite'] ?? '')) ?></td>
+                                        <td><?= vue_echapper(vue_formater_date_humaine($distribution['date'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
@@ -256,7 +237,6 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                 <tr>
                     <th>idProduit</th>
                     <th>Produit</th>
-                    <th>Unite</th>
                     <th class="text-end">Nombre de dons</th>
                     <th class="text-end">Quantite totale</th>
                     <th>Dernier don</th>
@@ -266,11 +246,10 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                 <?php foreach ($resumeDonsRecus as $ligne): ?>
                     <tr>
                         <td><?= (int) ($ligne['idProduit'] ?? 0) ?></td>
-                        <td class="fw-semibold"><?= $echapper($ligne['produit'] ?? '') ?></td>
-                        <td><?= $echapper($ligne['unite'] ?? '') ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($ligne['produit'] ?? '') ?></td>
                         <td class="text-end"><?= (int) ($ligne['nombre_dons'] ?? 0) ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite_totale'] ?? 0)) ?></td>
-                        <td><?= $echapper($formaterDate($ligne['dernier_don'] ?? '')) ?></td>
+                        <td class="text-end"><?= vue_formater_quantite((float) ($ligne['quantite_totale'] ?? 0), (string) ($ligne['unite'] ?? '')) ?></td>
+                        <td><?= vue_echapper(vue_formater_date_humaine($ligne['dernier_don'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -280,8 +259,8 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
 </section>
 
 <script
-    nonce="<?= $echapper((string) \Flight::get('csp_nonce')) ?>"
-    src="<?= $echapper(BASE_URL . 'assets/js/dashboard-details.js') ?>"
+    nonce="<?= vue_echapper((string) \Flight::get('csp_nonce')) ?>"
+    src="<?= vue_echapper(BASE_URL . 'assets/js/dashboard-details.js') ?>"
 ></script>
 
 <section class="section-card mb-4">
@@ -290,7 +269,10 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
     </div>
     <div class="px-3 pt-3">
         <p class="text-secondary small mb-0">
-            Cette vue est basee sur les besoins marques "dispatche".
+            Cette vue est basee sur la table <strong>DistributionVille</strong> (manuel + simulation validee).
+        </p>
+        <p class="text-secondary small mb-0">
+            La colonne "Quantite distribuee" exclut l'argent, affiche separement dans "Argent distribue".
         </p>
     </div>
     <?php if (count($resumeDistributionsParVille) === 0): ?>
@@ -305,17 +287,21 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                 <tr>
                     <th>Region</th>
                     <th>Ville</th>
+                    <th class="text-end">Nb distributions</th>
                     <th class="text-end">Quantite distribuee</th>
-                    <th class="text-end">Besoins totalement dispatches</th>
+                    <th class="text-end">Argent distribue</th>
+                    <th class="text-end">Besoins traites</th>
                     <th class="text-end">Besoins en cours</th>
                 </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($resumeDistributionsParVille as $ligne): ?>
                     <tr>
-                        <td><?= $echapper($ligne['region'] ?? '') ?></td>
-                        <td class="fw-semibold"><?= $echapper($ligne['ville'] ?? '') ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite_distribuee'] ?? 0)) ?></td>
+                        <td><?= vue_echapper($ligne['region'] ?? '') ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($ligne['ville'] ?? '') ?></td>
+                        <td class="text-end"><?= (int) ($ligne['total_distributions'] ?? 0) ?></td>
+                        <td class="text-end"><?= vue_formater_nombre((float) ($ligne['quantite_distribuee'] ?? 0)) ?></td>
+                        <td class="text-end"><?= vue_formater_montant_ar((float) ($ligne['montant_argent_distribue'] ?? 0)) ?></td>
                         <td class="text-end"><?= (int) ($ligne['besoins_totalement_dispatches'] ?? 0) ?></td>
                         <td class="text-end"><?= (int) ($ligne['besoins_en_cours'] ?? 0) ?></td>
                     </tr>
@@ -342,7 +328,6 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                 <tr>
                     <th>idProduit</th>
                     <th>Produit</th>
-                    <th>Unite</th>
                     <th class="text-end">Quantite disponible</th>
                 </tr>
                 </thead>
@@ -350,9 +335,8 @@ $detailsParVille = $donnees['details_par_ville'] ?? [];
                 <?php foreach ($etatGlobalStock as $ligne): ?>
                     <tr>
                         <td><?= (int) ($ligne['idProduit'] ?? 0) ?></td>
-                        <td class="fw-semibold"><?= $echapper($ligne['produit'] ?? '') ?></td>
-                        <td><?= $echapper($ligne['unite'] ?? '') ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite'] ?? 0)) ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($ligne['produit'] ?? '') ?></td>
+                        <td class="text-end"><?= vue_formater_quantite((float) ($ligne['quantite'] ?? 0), (string) ($ligne['unite'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

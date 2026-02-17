@@ -25,12 +25,28 @@ class DashboardRepository
                 r.nom AS region,
                 v.nom AS ville,
                 COUNT(b.idBesoin) AS total_besoins,
-                COALESCE(SUM(CASE WHEN b.status = 'dispatche' THEN 1 ELSE 0 END), 0) AS total_dispatche,
+                COALESCE(SUM(CASE WHEN b.status IN ('dispatche', 'achete') THEN 1 ELSE 0 END), 0) AS total_dispatche,
                 COALESCE(SUM(CASE WHEN b.status = 'non_dispatche' THEN 1 ELSE 0 END), 0) AS total_non_dispatche,
-                COALESCE(SUM(CASE WHEN b.status = 'non_dispatche' THEN b.quantite ELSE 0 END), 0) AS quantite_restante
+                COALESCE(SUM(
+                    CASE
+                        WHEN b.status = 'non_dispatche' THEN LEAST(
+                            b.quantite,
+                            GREATEST(b.quantiteInitiale - COALESCE(a.totalAchete, 0), 0)
+                        )
+                        ELSE 0
+                    END
+                ), 0) AS quantite_restante
             FROM ville v
             JOIN regions r ON r.idRegion = v.idRegion
             LEFT JOIN besoins b ON b.idVille = v.idVille
+            LEFT JOIN (
+                SELECT
+                    ac.idBesoin,
+                    SUM(ac.quantite) AS totalAchete
+                FROM achats ac
+                WHERE ac.statut = 'saisi'
+                GROUP BY ac.idBesoin
+            ) a ON a.idBesoin = b.idBesoin
             GROUP BY v.idVille, r.nom, v.nom
             ORDER BY r.nom ASC, v.nom ASC"
         );
@@ -66,13 +82,32 @@ class DashboardRepository
             "SELECT
                 r.nom AS region,
                 v.nom AS ville,
-                COALESCE(SUM(CASE WHEN b.status = 'dispatche' THEN b.quantite ELSE 0 END), 0) AS quantite_distribuee,
-                COALESCE(SUM(CASE WHEN b.status = 'dispatche' THEN 1 ELSE 0 END), 0) AS besoins_totalement_dispatches,
-                COALESCE(SUM(CASE WHEN b.status = 'non_dispatche' THEN 1 ELSE 0 END), 0) AS besoins_en_cours
+                COALESCE(dist.quantite_distribuee, 0) AS quantite_distribuee,
+                COALESCE(dist.total_distributions, 0) AS total_distributions,
+                COALESCE(dist.montant_argent_distribue, 0) AS montant_argent_distribue,
+                COALESCE(bes.besoins_totalement_dispatches, 0) AS besoins_totalement_dispatches,
+                COALESCE(bes.besoins_en_cours, 0) AS besoins_en_cours
             FROM ville v
             JOIN regions r ON r.idRegion = v.idRegion
-            LEFT JOIN besoins b ON b.idVille = v.idVille
-            GROUP BY r.nom, v.nom
+            LEFT JOIN (
+                SELECT
+                    dvm.idVille,
+                    COALESCE(SUM(CASE WHEN p.nom = 'Argent' AND u.nom = 'Ar' THEN 0 ELSE dvm.quantite END), 0) AS quantite_distribuee,
+                    COUNT(dvm.idDistribution) AS total_distributions,
+                    COALESCE(SUM(CASE WHEN p.nom = 'Argent' AND u.nom = 'Ar' THEN dvm.quantite ELSE 0 END), 0) AS montant_argent_distribue
+                FROM DistributionVille dvm
+                JOIN produit p ON p.idProduit = dvm.idProduit
+                JOIN unite u ON u.idUnite = dvm.idUnite
+                GROUP BY dvm.idVille
+            ) dist ON dist.idVille = v.idVille
+            LEFT JOIN (
+                SELECT
+                    b.idVille,
+                    COALESCE(SUM(CASE WHEN b.status IN ('dispatche', 'achete') THEN 1 ELSE 0 END), 0) AS besoins_totalement_dispatches,
+                    COALESCE(SUM(CASE WHEN b.status = 'non_dispatche' THEN 1 ELSE 0 END), 0) AS besoins_en_cours
+                FROM besoins b
+                GROUP BY b.idVille
+            ) bes ON bes.idVille = v.idVille
             ORDER BY r.nom ASC, v.nom ASC"
         );
     }
@@ -108,7 +143,13 @@ class DashboardRepository
                 v.nom AS ville,
                 p.nom AS produit,
                 u.nom AS unite,
-                b.quantite,
+                CASE
+                    WHEN b.status = 'non_dispatche' THEN LEAST(
+                        b.quantite,
+                        GREATEST(b.quantiteInitiale - COALESCE(a.totalAchete, 0), 0)
+                    )
+                    ELSE b.quantiteInitiale
+                END AS quantite,
                 b.status,
                 b.date
             FROM besoins b
@@ -116,6 +157,14 @@ class DashboardRepository
             JOIN regions r ON r.idRegion = v.idRegion
             JOIN produit p ON p.idProduit = b.idProduit
             JOIN unite u ON u.idUnite = b.idUnite
+            LEFT JOIN (
+                SELECT
+                    ac.idBesoin,
+                    SUM(ac.quantite) AS totalAchete
+                FROM achats ac
+                WHERE ac.statut = 'saisi'
+                GROUP BY ac.idBesoin
+            ) a ON a.idBesoin = b.idBesoin
             ORDER BY v.idVille ASC, b.date DESC, b.idBesoin DESC"
         );
     }
@@ -127,21 +176,20 @@ class DashboardRepository
     {
         return $this->baseDeDonnees->fetchAll(
             "SELECT
-                b.idBesoin,
-                b.idVille,
+                dvm.idDistribution,
+                dvm.idVille,
                 r.nom AS region,
                 v.nom AS ville,
                 p.nom AS produit,
                 u.nom AS unite,
-                b.quantite,
-                b.date
-            FROM besoins b
-            JOIN ville v ON v.idVille = b.idVille
+                dvm.quantite,
+                dvm.dateDistribution AS date
+            FROM DistributionVille dvm
+            JOIN ville v ON v.idVille = dvm.idVille
             JOIN regions r ON r.idRegion = v.idRegion
-            JOIN produit p ON p.idProduit = b.idProduit
-            JOIN unite u ON u.idUnite = b.idUnite
-            WHERE b.status = 'dispatche'
-            ORDER BY v.idVille ASC, b.date DESC, b.idBesoin DESC"
+            JOIN produit p ON p.idProduit = dvm.idProduit
+            JOIN unite u ON u.idUnite = dvm.idUnite
+            ORDER BY v.idVille ASC, dvm.dateDistribution DESC, dvm.idDistribution DESC"
         );
     }
 }

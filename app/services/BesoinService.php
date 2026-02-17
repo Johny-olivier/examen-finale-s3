@@ -73,11 +73,15 @@ class BesoinService
         $quantiteTotale = 0.0;
         $nonDispatche = 0;
         $dispatche = 0;
+        $achete = 0;
 
         foreach ($besoins as $besoin) {
             $quantiteTotale += (float) ($besoin['quantite'] ?? 0);
-            if (($besoin['status'] ?? '') === 'dispatche') {
+            $status = (string) ($besoin['status'] ?? '');
+            if ($status === 'dispatche') {
                 $dispatche++;
+            } elseif ($status === 'achete') {
+                $achete++;
             } else {
                 $nonDispatche++;
             }
@@ -87,6 +91,8 @@ class BesoinService
             'total_besoins' => count($besoins),
             'quantite_totale' => $quantiteTotale,
             'total_dispatche' => $dispatche,
+            'total_achete' => $achete,
+            'total_traite' => $dispatche + $achete,
             'total_non_dispatche' => $nonDispatche,
         ];
     }

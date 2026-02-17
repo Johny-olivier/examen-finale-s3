@@ -1,13 +1,21 @@
 <?php
-$echapper = static function ($valeur): string {
-    return htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
-};
-
 $titrePage = $title ?? 'Application BNGRC';
 $menuActif = $menu_actif ?? '';
 $nonceCsp = (string) \Flight::get('csp_nonce');
 
 $menus = [
+    [
+        'cle' => 'dashboard',
+        'titre' => 'Dashboard',
+        'icone' => 'fa-solid fa-chart-line',
+        'href' => BASE_URL . 'dashboard',
+    ],
+    [
+        'cle' => 'referentiels',
+        'titre' => 'CRUD Referentiels',
+        'icone' => 'fa-solid fa-gears',
+        'href' => BASE_URL . 'referentiels',
+    ],
     [
         'cle' => 'stock_initial',
         'titre' => 'Ajouter Stock BNGRC',
@@ -27,22 +35,34 @@ $menus = [
         'href' => BASE_URL . 'besoins',
     ],
     [
-        'cle' => 'distribution',
-        'titre' => 'Distribution des dons',
+        'cle' => 'distribution_manuelle',
+        'titre' => 'Distribution manuelle',
         'icone' => 'fa-solid fa-truck-ramp-box',
         'href' => BASE_URL . 'distribution',
+    ],
+    [
+        'cle' => 'simulation_dispatch',
+        'titre' => 'Simulation dispatch',
+        'icone' => 'fa-solid fa-flask-vial',
+        'href' => BASE_URL . 'simulation-dispatch',
+    ],
+    [
+        'cle' => 'achats',
+        'titre' => 'Achats (dons argent)',
+        'icone' => 'fa-solid fa-cart-shopping',
+        'href' => BASE_URL . 'achats',
+    ],
+    [
+        'cle' => 'recapitulation',
+        'titre' => 'Recapitulation',
+        'icone' => 'fa-solid fa-file-invoice-dollar',
+        'href' => BASE_URL . 'recapitulation',
     ],
     [
         'cle' => 'stock',
         'titre' => 'Consultation du stock',
         'icone' => 'fa-solid fa-warehouse',
         'href' => BASE_URL . 'stock/consultation',
-    ],
-    [
-        'cle' => 'dashboard',
-        'titre' => 'Dashboard',
-        'icone' => 'fa-solid fa-chart-line',
-        'href' => BASE_URL . 'dashboard',
     ],
 ];
 ?>
@@ -51,7 +71,7 @@ $menus = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $echapper($titrePage) ?></title>
+    <title><?= vue_echapper($titrePage) ?></title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,7 +79,7 @@ $menus = [
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-    <link href="<?= $echapper(BASE_URL . 'assets/css/app.css') ?>" rel="stylesheet">
+    <link href="<?= vue_echapper(BASE_URL . 'assets/css/app.css') ?>" rel="stylesheet">
 </head>
 <body class="app-page">
     <div class="app-shell">
@@ -72,9 +92,9 @@ $menus = [
             <nav class="nav flex-column sidebar-nav">
                 <?php foreach ($menus as $menu): ?>
                     <?php $estActif = $menuActif === $menu['cle']; ?>
-                    <a class="nav-link sidebar-link<?= $estActif ? ' active' : '' ?>" href="<?= $echapper($menu['href']) ?>">
-                        <i class="<?= $echapper($menu['icone']) ?>"></i>
-                        <span><?= $echapper($menu['titre']) ?></span>
+                    <a class="nav-link sidebar-link<?= $estActif ? ' active' : '' ?>" href="<?= vue_echapper($menu['href']) ?>">
+                        <i class="<?= vue_echapper($menu['icone']) ?>"></i>
+                        <span><?= vue_echapper($menu['titre']) ?></span>
                     </a>
                 <?php endforeach; ?>
             </nav>
@@ -82,7 +102,7 @@ $menus = [
 
         <main class="app-main">
             <header class="app-main-header">
-                <h2 class="mb-0"><?= $echapper($titrePage) ?></h2>
+                <h2 class="mb-0"><?= vue_echapper($titrePage) ?></h2>
                 <div class="header-actions">
                     <button
                         type="button"
@@ -110,12 +130,12 @@ $menus = [
     </div>
 
     <script
-        nonce="<?= $echapper($nonceCsp) ?>"
-        src="<?= $echapper(BASE_URL . 'assets/js/theme.js') ?>"
+        nonce="<?= vue_echapper($nonceCsp) ?>"
+        src="<?= vue_echapper(BASE_URL . 'assets/js/theme.js') ?>"
     ></script>
     <script
-        nonce="<?= $echapper($nonceCsp) ?>"
-        src="<?= $echapper(BASE_URL . 'assets/js/select-personnalise.js') ?>"
+        nonce="<?= vue_echapper($nonceCsp) ?>"
+        src="<?= vue_echapper(BASE_URL . 'assets/js/select-personnalise.js') ?>"
     ></script>
 </body>
 </html>

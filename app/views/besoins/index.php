@@ -3,26 +3,6 @@
 /** @var string $message_succes */
 /** @var string $message_erreur */
 
-$echapper = static function ($valeur): string {
-    return htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
-};
-
-$formaterNombre = static function (float $valeur): string {
-    return number_format($valeur, 2, ',', ' ');
-};
-
-$formaterDate = static function ($valeur): string {
-    $date = (string) $valeur;
-    if ($date === '') {
-        return '-';
-    }
-    $horodatage = strtotime($date);
-    if ($horodatage === false) {
-        return $date;
-    }
-    return date('d/m/Y H:i', $horodatage);
-};
-
 $villes = $donnees['villes'] ?? [];
 $produits = $donnees['produits'] ?? [];
 $unites = $donnees['unites'] ?? [];
@@ -42,13 +22,13 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
 
 <?php if ($message_succes !== ''): ?>
     <div class="alert alert-success border-0 shadow-sm" role="alert">
-        <i class="fa-solid fa-circle-check me-2"></i><?= $echapper($message_succes) ?>
+        <i class="fa-solid fa-circle-check me-2"></i><?= vue_echapper($message_succes) ?>
     </div>
 <?php endif; ?>
 
 <?php if ($message_erreur !== ''): ?>
     <div class="alert alert-danger border-0 shadow-sm" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i><?= $echapper($message_erreur) ?>
+        <i class="fa-solid fa-triangle-exclamation me-2"></i><?= vue_echapper($message_erreur) ?>
     </div>
 <?php endif; ?>
 
@@ -61,8 +41,8 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
     </div>
     <div class="col-sm-6 col-xl-3">
         <article class="stat-card stat-ok">
-            <p class="stat-label"><i class="fa-solid fa-check-double me-1"></i>Dispatches</p>
-            <p class="stat-value"><?= (int) ($resume['total_dispatche'] ?? 0) ?></p>
+            <p class="stat-label"><i class="fa-solid fa-check-double me-1"></i>Traites (dispatches + achetes)</p>
+            <p class="stat-value"><?= (int) ($resume['total_traite'] ?? 0) ?></p>
         </article>
     </div>
     <div class="col-sm-6 col-xl-3">
@@ -74,7 +54,7 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
     <div class="col-sm-6 col-xl-3">
         <article class="stat-card stat-partiel">
             <p class="stat-label"><i class="fa-solid fa-cubes me-1"></i>Quantite totale</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
         </article>
     </div>
 </div>
@@ -86,14 +66,14 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                 <h2 class="section-title">Nouveau besoin</h2>
             </div>
             <div class="p-3 p-lg-4">
-                <form method="post" action="<?= $echapper(BASE_URL . 'besoins') ?>" class="row g-3">
+                <form method="post" action="<?= vue_echapper(BASE_URL . 'besoins') ?>" class="row g-3">
                     <div class="col-md-6">
                         <label for="id_ville" class="form-label">Ville</label>
                         <select id="id_ville" name="id_ville" class="form-select" required>
                             <option value="">Selectionner une ville</option>
                             <?php foreach ($villes as $ville): ?>
                                 <option value="<?= (int) ($ville['idVille'] ?? 0) ?>">
-                                    <?= $echapper(($ville['region'] ?? '') . ' - ' . ($ville['ville'] ?? '')) ?>
+                                    <?= vue_echapper(($ville['region'] ?? '') . ' - ' . ($ville['ville'] ?? '')) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -104,7 +84,7 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                             <option value="">Selectionner un produit</option>
                             <?php foreach ($produits as $produit): ?>
                                 <option value="<?= (int) ($produit['idProduit'] ?? 0) ?>">
-                                    <?= $echapper(($produit['produit'] ?? '') . ' - ' . ($produit['categorie'] ?? '')) ?>
+                                    <?= vue_echapper(($produit['produit'] ?? '') . ' - ' . ($produit['categorie'] ?? '')) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -127,7 +107,7 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                             <option value="">Selectionner une unite</option>
                             <?php foreach ($unites as $unite): ?>
                                 <option value="<?= (int) ($unite['idUnite'] ?? 0) ?>">
-                                    <?= $echapper($unite['nom'] ?? '') ?>
+                                    <?= vue_echapper($unite['nom'] ?? '') ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -158,7 +138,7 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                 <h2 class="section-title">Filtre par ville</h2>
             </div>
             <div class="p-3 p-lg-4">
-                <form method="get" action="<?= $echapper(BASE_URL . 'besoins') ?>" class="row g-3">
+                <form method="get" action="<?= vue_echapper(BASE_URL . 'besoins') ?>" class="row g-3">
                     <div class="col-12">
                         <label for="filtre_ville" class="form-label">Ville</label>
                         <select id="filtre_ville" name="id_ville" class="form-select">
@@ -166,7 +146,7 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                             <?php foreach ($villes as $ville): ?>
                                 <?php $idVille = (int) ($ville['idVille'] ?? 0); ?>
                                 <option value="<?= $idVille ?>"<?= $idVilleFiltre === $idVille ? ' selected' : '' ?>>
-                                    <?= $echapper(($ville['region'] ?? '') . ' - ' . ($ville['ville'] ?? '')) ?>
+                                    <?= vue_echapper(($ville['region'] ?? '') . ' - ' . ($ville['ville'] ?? '')) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -175,7 +155,7 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                         <button type="submit" class="btn btn-outline-secondary">
                             <i class="fa-solid fa-filter me-2"></i>Filtrer
                         </button>
-                        <a href="<?= $echapper(BASE_URL . 'besoins') ?>" class="btn btn-outline-dark">
+                        <a href="<?= vue_echapper(BASE_URL . 'besoins') ?>" class="btn btn-outline-dark">
                             Reinitialiser
                         </a>
                     </div>
@@ -214,27 +194,29 @@ $idVilleFiltre = (int) ($donnees['id_ville_filtre'] ?? 0);
                 <?php foreach ($besoins as $besoin): ?>
                     <?php
                     $status = (string) ($besoin['status'] ?? '');
-                    $classeBadge = $status === 'dispatche' ? 'text-bg-success' : 'text-bg-warning';
-                    $libelleStatus = $status === 'dispatche' ? 'Dispatche' : 'Non dispatche';
+                    $metaStatus = vue_meta_statut_besoin($status);
+                    $classeBadge = $metaStatus['classe'];
+                    $libelleStatus = $metaStatus['libelle'];
                     $quantite = (float) ($besoin['quantite'] ?? 0);
                     $prixUnitaire = (float) ($besoin['prixUnitaire'] ?? 0);
+                    $unite = (string) ($besoin['unite'] ?? '');
                     ?>
                     <tr>
                         <td><?= (int) ($besoin['idBesoin'] ?? 0) ?></td>
                         <td>
-                            <div class="fw-semibold"><?= $echapper($besoin['region'] ?? '') ?></div>
-                            <small class="text-secondary"><?= $echapper($besoin['ville'] ?? '') ?></small>
+                            <div class="fw-semibold"><?= vue_echapper($besoin['region'] ?? '') ?></div>
+                            <small class="text-secondary"><?= vue_echapper($besoin['ville'] ?? '') ?></small>
                         </td>
                         <td>
-                            <div class="fw-semibold"><?= $echapper($besoin['produit'] ?? '') ?></div>
-                            <small class="text-secondary"><?= $echapper($besoin['unite'] ?? '') ?></small>
+                            <div class="fw-semibold"><?= vue_echapper($besoin['produit'] ?? '') ?></div>
+                            <small class="text-secondary"><?= vue_echapper($unite) ?></small>
                         </td>
-                        <td class="text-end"><?= $formaterNombre($quantite) ?></td>
-                        <td class="text-end"><?= $formaterNombre($prixUnitaire) ?></td>
-                        <td class="text-end"><?= $formaterNombre($quantite * $prixUnitaire) ?></td>
-                        <td><?= $echapper($formaterDate($besoin['date'] ?? '')) ?></td>
+                        <td class="text-end"><?= vue_formater_quantite($quantite, $unite) ?></td>
+                        <td class="text-end"><?= vue_formater_prix_unitaire_ar($prixUnitaire) ?></td>
+                        <td class="text-end"><?= vue_formater_montant_ar($quantite * $prixUnitaire) ?></td>
+                        <td><?= vue_echapper(vue_formater_date_humaine($besoin['date'] ?? '')) ?></td>
                         <td class="text-center">
-                            <span class="badge badge-etat <?= $echapper($classeBadge) ?>"><?= $echapper($libelleStatus) ?></span>
+                            <span class="badge badge-etat <?= vue_echapper($classeBadge) ?>"><?= vue_echapper($libelleStatus) ?></span>
                         </td>
                     </tr>
                 <?php endforeach; ?>
