@@ -1,14 +1,6 @@
 <?php
 /** @var array<string,mixed> $donnees */
 
-$echapper = static function ($valeur): string {
-    return htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
-};
-
-$formaterNombre = static function (float $valeur): string {
-    return number_format($valeur, 2, ',', ' ');
-};
-
 $stockDetaille = $donnees['stock_detaille'] ?? [];
 $resume = $donnees['resume'] ?? [];
 ?>
@@ -20,7 +12,7 @@ $resume = $donnees['resume'] ?? [];
             Visualisation des disponibilites actuelles par produit et unite.
         </p>
     </div>
-    <a href="<?= $echapper(BASE_URL . 'stock/initialisation') ?>" class="btn btn-dispatch">
+    <a href="<?= vue_echapper(BASE_URL . 'stock/initialisation') ?>" class="btn btn-dispatch">
         <i class="fa-solid fa-boxes-stacked me-2"></i>
         Initialiser le stock
     </a>
@@ -36,14 +28,14 @@ $resume = $donnees['resume'] ?? [];
     <div class="col-sm-6 col-xl-3">
         <article class="stat-card stat-ok">
             <p class="stat-label"><i class="fa-solid fa-cubes me-1"></i>Quantite disponible</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
         </article>
     </div>
 </div>
 
 <section class="section-card">
     <div class="section-card-header d-flex justify-content-between align-items-center">
-        <h2 class="section-title">Stock BNGRC (idProduit / quantite)</h2>
+        <h2 class="section-title">Stock BNGRC</h2>
         <span class="badge text-bg-light">Etat global</span>
     </div>
 
@@ -59,7 +51,6 @@ $resume = $donnees['resume'] ?? [];
                 <tr>
                     <th>idProduit</th>
                     <th>Produit</th>
-                    <th>Unite</th>
                     <th class="text-end">Quantite disponible</th>
                 </tr>
                 </thead>
@@ -67,9 +58,8 @@ $resume = $donnees['resume'] ?? [];
                 <?php foreach ($stockDetaille as $ligne): ?>
                     <tr>
                         <td><?= (int) ($ligne['idProduit'] ?? 0) ?></td>
-                        <td class="fw-semibold"><?= $echapper($ligne['produit'] ?? '') ?></td>
-                        <td><?= $echapper($ligne['unite'] ?? '') ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite'] ?? 0)) ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($ligne['produit'] ?? '') ?></td>
+                        <td class="text-end"><?= vue_formater_quantite((float) ($ligne['quantite'] ?? 0), (string) ($ligne['unite'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

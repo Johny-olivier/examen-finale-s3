@@ -6,19 +6,47 @@
             - table categories (idCategorie, nom)
             - table produit (idProduit, nom, idCategorie, prixUnitaire)
             - table unite (idUnite, nom)
-            - table besoins (idBesoin, idVille, idProduit, quantite, idUnite, status, date)
+            - table besoins (idBesoin, idVille, idProduit, quantite, quantiteInitiale, idUnite, status: non_dispatche/dispatche/achete, date)
             - table dons (idDon, idProduit, idUnite, quantite, donateur, dateDon)
+            - table typeParametreAchat (idTypeParametreAchat, code, libelle)
+            - table parametreAchat (idParametreAchat, idTypeParametreAchat, valeurDecimal, dateApplication, actif, dateMaj)
+            - table achats (idAchat, idBesoin, idVille, idProduit, idUnite, quantite, prixUnitaire, tauxFrais, montantSousTotal, montantFrais, montantTotal, dateAchat, statut, commentaire)
+            - table achatDons (idAchatDon, idAchat, idDon, montantAffecte)
             - table StockBNGRC (idStock, idProduit, idUnite, quantite)
             - table MvtStock (idMvt, typeMvt, idProduit, idUnite, quantite, dateMvt)
+            - table DistributionVille (idDistribution, idVille, idProduit, idUnite, quantite, dateDistribution)
+            - index idx_dons_produit_unite_date
+            - index idx_parametre_achat_type_actif
+            - index idx_achats_ville_date
+            - index idx_achats_besoin
+            - index idx_achats_produit_unite
+            - index idx_achat_don_don
             - index idx_besoins_status_date_id
+            - index idx_distribution_ville_date
     [OK] Donnees initiales / test
-            - script sql/16022026-02-init-data.sql (Atsinanana/Boeny, Toamasina/Majunga)
+            - script sql/16022026-02-init-data.sql (5 villes cyclone S3 + besoins initiaux + dons + stock + mvt don)
             - script sql/16022026-03-test-data-distribution.sql
-            - script sql/16022026-04-select.sql
     [OK] php
             - bootstrap DB via Flight::db() dans app/config/services.php
     [OK] js
             - aucun
+
+[OK] Helpers de vue mutualises (anti-redondance)
+    [OK] php
+            - app/config/vue_helpers.php
+                * vue_echapper(...): string
+                * vue_formater_nombre(float): string
+                * vue_formater_quantite(float, ?string): string
+                * vue_formater_montant_ar(float): string
+                * vue_formater_prix_unitaire_ar(float): string
+                * vue_formater_date_humaine(..., bool): string
+            - app/config/bootstrap.php
+                * require('vue_helpers.php')
+    [OK] Affichage
+            - suppression des closures locales dupliquees dans les vues
+            - format quantite + unite applique sur les tableaux pertinents
+            - format date humain applique (ex: 12 fev 2026)
+            - format prix/montant en Ar applique
 
 [OK] Ajouter Stock BNGRC
     [OK] Base de donnee
@@ -62,7 +90,7 @@
             - lecture table StockBNGRC + produit + unite
     [OK] Affichage
             - page app/views/stock/consultation.php
-                + tableau idProduit / produit / unite / quantite disponible
+                + tableau idProduit / produit / quantite(unite)
                 + recap global lignes et quantite
     [OK] php
             - controller app/controllers/StockController.php
@@ -113,13 +141,13 @@
 
 [OK] Insertion des besoins (par ville)
     [OK] Base de donnee
-            - table besoins (status='non_dispatche' par defaut)
+            - table besoins (status='non_dispatche' par defaut, etat final possible: 'dispatche' ou 'achete')
             - liaison ville/region/produit/unite
     [OK] Affichage
             - page app/views/besoins/index.php
                 + formulaire insertion besoin
                 + filtre par ville
-                + liste des besoins saisis (status, date, montant estime)
+                + liste des besoins saisis (status, date humaine, montant estime en Ar)
                 + recap total/dispatches/non dispatches
     [OK] php
             - repository
@@ -141,32 +169,33 @@
     [OK] js
             - aucun metier
 
-[OK] Distribution des dons
+[OK] Distribution manuelle des dons (page separee)
     [OK] Base de donnee
-            - lecture besoins status='non_dispatche' ordonnes par date ASC puis idBesoin ASC
-            - decrement StockBNGRC lors validation
+            - table DistributionVille pour tracer ville/produit/unite/quantite/date
+            - decrement StockBNGRC lors distribution
             - insertion MvtStock typeMvt='distribution'
-            - update besoins (status='dispatche' ou quantite restante)
+            - mise a jour besoins seulement pour distributions materielles (ville/produit/unite)
+            - distribution Argent/Ar: pas de maj besoins (achat manuel ensuite)
     [OK] Affichage
             - page app/views/distribution/index.php
-                + etat initial "simulation non lancee"
-                + bouton simuler (sans impact base)
-                + simulation de dispatch avant validation
-                + tableau detail des besoins
-                + projection du stock apres simulation
-                + bouton valider dispatch (application reelle)
+                + formulaire distribution manuelle (ville, produit, unite, quantite, date)
+                + filtre historique par ville
+                + historique distributions manuelles
+                + apercu stock actuel
     [OK] php
-            - routes app/config/routes.php
-                * GET /distribution
-                * POST /distribution/simuler
-                * POST /distribution/valider
             - repository
-                + app/repositories/DistributionRepository.php
-                    * obtenirBesoinsNonDispatcheParPriorite(): array
-                    * obtenirStockAvecLibelles(): array
+                + app/repositories/DistributionManuelleRepository.php
+                    * obtenirVilles(): array
+                    * obtenirProduits(): array
+                    * obtenirUnites(): array
+                    * obtenirStockDetaille(): array
+                    * obtenirDistributionsManuelles(?int): array
                     * obtenirStockVerrouille(int, int): array
                     * decrementerStock(int, float): void
-                    * enregistrerMouvementDistribution(int, int, float): void
+                    * insererMouvementDistribution(int, int, float, ?string): void
+                    * insererDistributionVille(int, int, int, float, ?string): void
+                    * estDistributionArgent(int, int): bool
+                    * obtenirBesoinsNonDispatcheVilleProduitUniteVerrouilles(int, int, int): array
                     * marquerBesoinDispatche(int): void
                     * mettreAJourQuantiteBesoin(int, float): void
                     * demarrerTransaction(): void
@@ -174,15 +203,66 @@
                     * annulerTransaction(): void
                     * estEnTransaction(): bool
             - service
+                + app/services/DistributionManuelleService.php
+                    * obtenirDonneesPage(?int): array
+                    * distribuerManuellement(int, int, int, float, ?string): array
+                    * appliquerMiseAJourBesoinsSiMateriel(int, int, int, float): void
+            - controller
+                + app/controllers/DistributionManuelleController.php
+                    * afficherPageDistribution(): void
+                    * enregistrerDistribution(): void
+    [OK] js
+            - aucun metier
+
+[OK] Simulation et validation automatique (page separee)
+    [OK] Base de donnee
+            - lecture besoins status='non_dispatche'
+            - mode dispatch par date (date ASC puis idBesoin ASC)
+            - mode dispatch par quantite (quantite ASC puis date ASC puis idBesoin ASC)
+            - mode dispatch proportionnel (allocation par coefficient et arrondi inferieur)
+            - validation: decrement StockBNGRC + MvtStock typeMvt='distribution' + trace DistributionVille
+            - update besoins (status='dispatche' ou quantite restante)
+            - bouton reinitialisation: retour au point de depart via script sql/16022026-02-init-data.sql
+    [OK] Affichage
+            - page app/views/simulation/index.php
+                + etat initial "simulation non lancee"
+                + select mode de dispatch (date / quantite / proportionnel)
+                + bouton simuler (sans impact base)
+                + bouton valider dispatch (application reelle)
+                + bouton reinitialiser donnees
+                + tableau detail besoins simules
+                + projection stock apres simulation
+    [OK] php
+            - repository
+                + app/repositories/DistributionRepository.php
+                    * obtenirBesoinsNonDispatcheParPriorite(): array
+                    * obtenirStockAvecLibelles(): array
+                    * obtenirStockVerrouille(int, int): array
+                    * decrementerStock(int, float): void
+                    * enregistrerMouvementDistribution(int, int, float): void
+                    * insererDistributionVille(int, int, int, float): void
+                    * marquerBesoinDispatche(int): void
+                    * mettreAJourQuantiteBesoin(int, float): void
+                    * demarrerTransaction(): void
+                    * validerTransaction(): void
+                    * annulerTransaction(): void
+                    * estEnTransaction(): bool
+                    * reinitialiserDonneesDepuisScriptSql(string): void
+            - service
                 + app/services/DistributionService.php
-                    * simulerDistribution(): array
-                    * validerDistribution(): array
+                    * simulerDistribution(string): array
+                    * validerDistribution(string): array
                     * genererCleStock(int, int): string
+                    * obtenirModesDispatchDisponibles(): array
+                    * normaliserModeDispatch(string): string
+                    * obtenirLibelleModeDispatch(string): string
+                    * reinitialiserDonneesPointDepart(): void
             - controller
                 + app/controllers/DistributionController.php
-                    * afficherPageDistribution(): void
+                    * afficherPageSimulation(): void
                     * simulerDistribution(): void
                     * validerDistribution(): void
+                    * reinitialiserDonneesPointDepart(): void
     [OK] js
             - aucun metier
 
@@ -190,16 +270,16 @@
     [OK] Base de donnee
             - resume besoins par ville
             - resume dons recus
-            - resume distributions par ville
+            - resume distributions par ville (base DistributionVille)
             - etat global stock
-            - details besoins par ville (liste)
-            - details dons distribues par ville (liste basee sur status dispatche)
+            - details besoins par ville
+            - details dons obtenus par ville (inclut distributions manuelles + simulation validee)
     [OK] Affichage
             - page app/views/dashboard/index.php
                 + cartes indicateurs
                 + 4 tableaux de synthese
                 + bouton "Voir details" par ville
-                + lightbox detail (colonne besoins / colonne dons distribues)
+                + lightbox details (besoins / dons distribues)
     [OK] php
             - repository
                 + app/repositories/DashboardRepository.php
@@ -223,12 +303,153 @@
                 + injection template ville
                 + fermeture clic exterieur + touche Escape
 
+[OK] Achats via dons en argent (V2)
+    [OK] Base de donnee
+            - table typeParametreAchat (parametre de frais configurable)
+            - table parametreAchat (valeur active du taux frais)
+            - table achats (historique achats depuis besoins restants)
+            - table achatDons (trace disponible pour evolutions)
+            - extension MvtStock typeMvt='achat'
+            - donnees de base: categorie Financier, produit Argent, unite Ar
+            - achat partiel: mise a jour besoins.quantite (reste reel)
+            - si quantite achetee couvre le besoin, status besoin passe a 'achete'
+    [OK] Affichage
+            - page app/views/achats/index.php
+                + formulaire achat depuis besoins restants
+                + filtre ville
+                + liste besoins restants a acheter
+                + liste achats effectues
+                + recap budget argent / frais / montants
+    [OK] php
+            - repository
+                + app/repositories/AchatRepository.php
+                    * obtenirVilles(): array
+                    * obtenirBesoinsRestantsPourAchat(?int): array
+                    * obtenirAchats(?int): array
+                    * obtenirTauxFraisAchatActif(): float
+                    * obtenirProduitArgentUniteAr(): array
+                    * obtenirSoldeArgentDistribueDisponible(int, int, ?int): float
+                    * obtenirBesoinVerrouille(int): array
+                    * obtenirQuantiteAcheteeBesoinVerrouille(int): float
+                    * obtenirStockVerrouille(int, int): array
+                    * obtenirMontantArgentDistribueVilleVerrouille(int, int, int): float
+                    * obtenirMontantTotalAchatsVilleVerrouille(int): float
+                    * insererAchat(...): int
+                    * insererStock(int, int, float): void
+                    * incrementerStock(int, float): void
+                    * insererMouvementAchat(int, int, float, ?string): void
+                    * marquerBesoinAchete(int): void
+                    * mettreAJourQuantiteBesoin(int, float): void
+                    * demarrerTransaction(): void
+                    * validerTransaction(): void
+                    * annulerTransaction(): void
+                    * estEnTransaction(): bool
+            - service
+                + app/services/AchatService.php
+                    * obtenirDonneesPage(?int): array
+                    * enregistrerAchatDepuisBesoin(int, float, ?string, ?string): void
+                    * construireResume(array): array
+            - controller
+                + app/controllers/AchatController.php
+                    * afficherPageAchats(): void
+                    * enregistrerAchat(): void
+                    * construireUrlAchats(int, string, string): string
+    [OK] js
+            - aucun metier
+
+[OK] Recapitulation montants (Ajax)
+    [OK] Base de donnee
+            - calculs sur besoins + achats (totaux, satisfaits, restants)
+            - detail des montants par ville
+    [OK] Affichage
+            - page app/views/recapitulation/index.php
+                + cartes de montants globaux
+                + tableau detail par ville
+                + bouton actualiser en Ajax
+                + horodatage derniere actualisation
+    [OK] php
+            - repository
+                + app/repositories/RecapitulationRepository.php
+                    * obtenirResumeMontantsBesoins(): array
+                    * obtenirResumeMontantsParVille(): array
+            - service
+                + app/services/RecapitulationService.php
+                    * obtenirDonneesRecapitulation(): array
+            - controller
+                + app/controllers/RecapitulationController.php
+                    * afficherPageRecapitulation(): void
+                    * obtenirDonneesRecapitulationAjax(): void
+                    * envoyerJson(array): void
+    [OK] js
+            - assets/js/recapitulation.js
+                + appel Ajax GET /recapitulation/donnees
+                + mise a jour dynamique cartes + tableau
+                + message succes/erreur
+
+[OK] CRUD Referentiels
+    [OK] Base de donnee
+            - utilise tables regions / ville / categories / produit / unite
+            - utilise tables typeParametreAchat / parametreAchat
+    [OK] Affichage
+            - page app/views/referentiels/index.php
+                + CRUD region
+                + CRUD ville
+                + CRUD categorie
+                + CRUD produit (avec prix unitaire)
+                + CRUD unite
+                + CRUD type parametre achat (code, libelle)
+                + CRUD parametre achat (valeur, date application, actif)
+    [OK] php
+            - repository
+                + app/repositories/ReferentielRepository.php
+                    * obtenirRegions(): array
+                    * ajouterRegion(string): void
+                    * modifierRegion(int, string): void
+                    * supprimerRegion(int): void
+                    * obtenirVilles(): array
+                    * ajouterVille(int, string): void
+                    * modifierVille(int, int, string): void
+                    * supprimerVille(int): void
+                    * obtenirCategories(): array
+                    * ajouterCategorie(string): void
+                    * modifierCategorie(int, string): void
+                    * supprimerCategorie(int): void
+                    * obtenirProduits(): array
+                    * ajouterProduit(string, int, float): void
+                    * modifierProduit(int, string, int, float): void
+                    * supprimerProduit(int): void
+                    * obtenirUnites(): array
+                    * ajouterUnite(string): void
+                    * modifierUnite(int, string): void
+                    * supprimerUnite(int): void
+                    * obtenirTypesParametreAchat(): array
+                    * ajouterTypeParametreAchat(string, string): void
+                    * modifierTypeParametreAchat(int, string, string): void
+                    * supprimerTypeParametreAchat(int): void
+                    * obtenirParametresAchat(): array
+                    * ajouterParametreAchat(int, float, string, int): void
+                    * modifierParametreAchat(int, int, float, string, int): void
+                    * supprimerParametreAchat(int): void
+            - service
+                + app/services/ReferentielService.php
+                    * obtenirDonneesPage(): array
+                    * ajouter/modifier/supprimer region, ville, categorie, produit, unite
+                    * ajouter/modifier/supprimer type parametre achat
+                    * ajouter/modifier/supprimer parametre achat
+            - controller
+                + app/controllers/ReferentielController.php
+                    * afficherPageReferentiels(): void
+                    * actions CRUD par entite
+    [OK] js
+            - aucun metier
+
 [OK] UI globale moderne + mode dark/light
     [OK] Affichage
             - layout unique app/views/layout.php
                 + sidebar navigation
                 + header global
                 + bouton switch theme
+                + menus separes: distribution manuelle / simulation / referentiels
             - style global assets/css/app.css
                 + design light moderne
                 + mode dark complet
@@ -242,3 +463,6 @@
                 + detect theme systeme
                 + persistence localStorage
                 + toggle clair/sombre
+            - assets/js/select-personnalise.js
+                + select custom global
+                + application auto sur contenu injecte (dashboard/lightbox)

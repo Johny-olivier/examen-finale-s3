@@ -256,8 +256,20 @@
         synchroniserEtat(select, conteneur, bouton, menu);
     };
 
-    var initialiserSelectsPersonnalises = function () {
-        var selects = document.querySelectorAll('select.form-select:not([data-no-select-personnalise="true"])');
+    var initialiserSelectsPersonnalises = function (racine) {
+        var contexte = racine && racine.querySelectorAll ? racine : document;
+        var selecteur = 'select.form-select:not([data-no-select-personnalise="true"])';
+        var selects = [];
+
+        if (contexte.matches && contexte.matches(selecteur)) {
+            selects.push(contexte);
+        }
+
+        var selectsTrouves = contexte.querySelectorAll(selecteur);
+        selectsTrouves.forEach(function (select) {
+            selects.push(select);
+        });
+
         selects.forEach(function (select) {
             construireSelectPersonnalise(select);
         });
@@ -282,11 +294,44 @@
     });
 
     window.addEventListener('resize', fermerSelectOuvert);
-    window.addEventListener('scroll', fermerSelectOuvert, true);
+    window.addEventListener('scroll', function (event) {
+        if (!selectOuvert) {
+            return;
+        }
+
+        var cible = event.target;
+        if (cible instanceof Element && selectOuvert.contains(cible)) {
+            return;
+        }
+
+        fermerSelectOuvert();
+    }, true);
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialiserSelectsPersonnalises);
+        document.addEventListener('DOMContentLoaded', function () {
+            initialiserSelectsPersonnalises(document);
+        });
     } else {
-        initialiserSelectsPersonnalises();
+        initialiserSelectsPersonnalises(document);
+    }
+
+    window.initialiserSelectsPersonnalises = initialiserSelectsPersonnalises;
+
+    if ('MutationObserver' in window && document.body) {
+        var observateur = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                mutation.addedNodes.forEach(function (noeud) {
+                    if (!(noeud instanceof Element)) {
+                        return;
+                    }
+                    initialiserSelectsPersonnalises(noeud);
+                });
+            });
+        });
+
+        observateur.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 })();

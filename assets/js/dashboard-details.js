@@ -26,6 +26,9 @@
 
         contenuLightbox.innerHTML = '';
         contenuLightbox.appendChild(template.content.cloneNode(true));
+        if (typeof window.initialiserSelectsPersonnalises === 'function') {
+            window.initialiserSelectsPersonnalises(contenuLightbox);
+        }
         titreLightbox.textContent = 'Details - ' + libelleVille;
 
         lightbox.removeAttribute('hidden');
@@ -59,4 +62,3 @@
         }
     });
 })();
-

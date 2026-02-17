@@ -1,69 +1,105 @@
 # Examen Finale S3 - BNGRC
 
-Application web PHP (FlightPHP) pour la gestion des dons, besoins, stock BNGRC et distribution.
-Le projet est orienté contexte Madagascar (Toamasina / Majunga) avec priorisation de distribution par date de besoin.
+Application web PHP (FlightPHP) pour la gestion BNGRC: dons, besoins, stock, distribution manuelle, simulation/validation automatique, achats via dons en argent, et recapitulation montants en Ajax.
 
-Ce README est volontairement detaille pour permettre a un nouveau developpeur (ou une autre IA) de reprendre et modifier le projet sans historique de chat.
+Contexte de donnees actuel: Madagascar, avec 5 villes cibles (Toamasina, Mananjary, Farafangana, Nosy Be, Morondava).
 
 ## 1) Objectif metier
 
 L'application permet de:
-- enregistrer des dons recus
+- enregistrer des dons recus (nature et argent)
 - enregistrer des besoins par ville
-- initialiser/consulter le stock BNGRC
-- simuler puis valider une distribution des dons
-- suivre un dashboard global (besoins, dons, distributions, stock)
+- initialiser et consulter le stock BNGRC
+- distribuer manuellement des produits a une ville
+- simuler un dispatch automatique (mode date, quantite ou proportionnel) puis valider le dispatch reel
+- reinitialiser les donnees vers un point de depart SQL
+- acheter des besoins restants via dons en argent (avec frais configurable)
+- consulter une recapitulation des montants (totaux/satisfaits/restants) avec actualisation Ajax
+- gerer les referentiels (CRUD)
 
 ## 2) Fonctionnalites implementees
 
-- Ajouter Stock BNGRC
-- Consulter le stock BNGRC
+- Ajouter stock BNGRC
+- Consulter le stock
 - Inserer des dons
 - Inserer des besoins (par ville)
-- Simuler et valider la distribution des dons (workflow en 2 boutons: Simuler puis Valider, priorite date ASC puis idBesoin ASC)
-- Dashboard avec:
-  - resume besoins par ville
-  - resume dons recus
-  - resume dons distribues par ville
-  - etat global du stock
-  - details par ville via lightbox (besoins + dons distribues)
-- Interface moderne avec sidebar + mode clair/sombre
+- Distribution manuelle des dons
+- Simulation + validation de dispatch automatique (modes `date`, `quantite`, `proportionnel`)
+- Reinitialisation des donnees vers le point de depart SQL
+- Dashboard avec details par ville (lightbox)
+- Achats via dons en argent (filtre ville + historique)
+- Recapitulation montants avec bouton actualiser en Ajax
+- CRUD referentiels: regions, villes, categories, produits, unites, types de parametre achat, parametres achat
+- UI moderne (sidebar, mode clair/sombre, select personnalise y compris contenu dynamique)
 
-## 3) Stack technique
+## 3) Regles metier principales
+
+### Distribution automatique
+- source: besoins `status='non_dispatche'`
+- modes disponibles:
+  - `date`: ordre `date ASC`, puis `idBesoin ASC`
+  - `quantite`: ordre `quantite ASC`, puis `date ASC`, puis `idBesoin ASC`
+  - `proportionnel`: allocation par coefficient `besoin_i * stock / somme_besoins`, avec arrondi inferieur
+- simulation: sans impact BD
+- validation: decompte stock + insertion `MvtStock(typeMvt='distribution')` + trace dans `DistributionVille`
+- besoin complet: `status='dispatche'`
+- besoin partiel: mise a jour de `besoins.quantite` avec la quantite restante
+- bouton de reinitialisation: rejoue `sql/16022026-02-init-data.sql` pour revenir au point de depart
+
+### Distribution manuelle
+- choix libre ville/produit/unite/quantite
+- blocage si stock insuffisant
+- decrement stock + mouvement `distribution`
+- trace dans `DistributionVille`
+- si distribution materielle: mise a jour des besoins correspondants (`ville + produit + unite`) par ordre `date ASC`, `idBesoin ASC`
+  - couverture complete: `status='dispatche'`
+  - couverture partielle: mise a jour `besoins.quantite` restante
+- si distribution d'argent (`Argent` / `Ar`): pas de mise a jour automatique des besoins (achat manuel requis)
+
+### Achats via dons en argent
+- base de travail: besoins restants (`status='non_dispatche'`)
+- montant achat: `quantite * prixUnitaire`
+- montant total avec frais: `sous_total + (sous_total * tauxFrais/100)`
+- taux frais configurable via `parametreAchat`
+- financement par argent deja distribue a la ville (`DistributionVille` avec `produit='Argent'`, `unite='Ar'`)
+- achat bloque si fonds en argent distribue insuffisants pour la ville
+- achat bloque si le produit existe encore dans les dons restants (`StockBNGRC > 0`)
+- achat valide: insertion `achats` + ajout stock + mouvement `MvtStock(typeMvt='achat')`
+- achat partiel: mise a jour de `besoins.quantite` (reste reel)
+- si la quantite achetee couvre le besoin, le besoin passe en `status='achete'`
+
+### Recapitulation montants
+- page dediee avec refresh Ajax
+- affiche:
+  - besoins totaux (montant)
+  - besoins satisfaits (montant)
+  - besoins restants (montant)
+  - taux de satisfaction
+  - detail par ville
+
+## 4) Stack technique
 
 - PHP 8.x
 - FlightPHP 3.x
-- PDO (via `Flight::db()` enregistre dans `app/config/services.php`)
+- PDO via `Flight::db()`
 - MySQL/MariaDB
-- Front: Bootstrap 5, Font Awesome, CSS custom, JS vanilla
-- Debug: Tracy
+- Bootstrap 5 + Font Awesome + CSS custom + JS vanilla
+- Tracy (debug)
 
-Dependances principales: `composer.json`.
+## 5) Architecture
 
-## 4) Architecture
+Architecture MVC par fonctionnalite:
+- `app/repositories/*Repository.php`: SQL uniquement
+- `app/services/*Service.php`: logique metier
+- `app/controllers/*Controller.php`: HTTP + rendu + redirection
+- `app/views/*`: templates
 
-Architecture MVC decoupee par fonctionnalite:
-
-- `app/repositories/*Repository.php`
-  - acces SQL uniquement
-  - aucune logique d'affichage
-- `app/services/*Service.php`
-  - logique metier
-  - orchestration transactionnelle
-- `app/controllers/*Controller.php`
-  - reception HTTP
-  - appels services
-  - rendu des vues
-- `app/views/*`
-  - templates PHP
-  - UI
-
-Convention actuelle:
+Conventions appliquees:
 - noms de fonctions/variables en francais
-- dependance DB injectee dans repository via `new XRepository(Flight::db())`
-- routes centralisees dans `app/config/routes.php`
+- base de donnees injectee via `new XRepository(Flight::db())`
+- helpers de vues centralises dans `app/config/vue_helpers.php`
 
-## 5) Structure des dossiers
+## 6) Structure principale
 
 ```txt
 app/
@@ -73,116 +109,177 @@ app/
     constant.php
     routes.php
     services.php
+    vue_helpers.php
   controllers/
+    AchatController.php
     BesoinController.php
     DashboardController.php
-    DistributionController.php
+    DistributionController.php                # simulation/validation auto
+    DistributionManuelleController.php        # distribution manuelle
     DonController.php
+    RecapitulationController.php
+    ReferentielController.php
     StockController.php
   repositories/
+    AchatRepository.php
     BesoinRepository.php
     DashboardRepository.php
     DistributionRepository.php
+    DistributionManuelleRepository.php
     DonRepository.php
+    RecapitulationRepository.php
+    ReferentielRepository.php
     StockRepository.php
   services/
+    AchatService.php
     BesoinService.php
     DashboardService.php
     DistributionService.php
+    DistributionManuelleService.php
     DonService.php
+    RecapitulationService.php
+    ReferentielService.php
     StockService.php
   views/
-    layout.php
+    achats/index.php
     besoins/index.php
     dashboard/index.php
     distribution/index.php
     dons/index.php
-    stock/initialisation.php
+    recapitulation/index.php
+    referentiels/index.php
+    simulation/index.php
     stock/consultation.php
+    stock/initialisation.php
     errors/404.php
     errors/500.php
+    layout.php
 assets/
   css/app.css
   js/dashboard-details.js
+  js/recapitulation.js
+  js/select-personnalise.js
   js/theme.js
 sql/
   16022026-01-schema.sql
   16022026-02-init-data.sql
   16022026-03-test-data-distribution.sql
-  16022026-04-select.sql
-index.php
-.htaccess
-git.sh
-todo
 ```
 
-## 6) Base de donnees
-
-### Scripts SQL
-
-Executer dans cet ordre:
-
-1. `sql/16022026-01-schema.sql`
-2. `sql/16022026-02-init-data.sql`
-3. (optionnel test) `sql/16022026-03-test-data-distribution.sql`
-4. (verification) `sql/16022026-04-select.sql`
+## 7) Base de donnees
 
 ### Tables principales
-
 - `regions`, `ville`
 - `categories`, `produit`, `unite`
-- `besoins`
+- `besoins` (`quantite` restant, `quantiteInitiale`, `status`: `non_dispatche`, `dispatche`, `achete`)
 - `dons`
+- `typeParametreAchat`, `parametreAchat`
+- `achats`, `achatDons`
 - `StockBNGRC`
-- `MvtStock`
+- `MvtStock` (don/distribution/achat)
+- `DistributionVille`
 
-### Regles metier importantes
+### Scripts SQL (3 fichiers uniquement)
 
-- **Ordre de distribution**:
-  - `besoins.status = 'non_dispatche'`
-  - tri `date ASC`, puis `idBesoin ASC`
-- **Simulation (bouton Simuler)**:
-  - calcule le resultat theorique de dispatch
-  - ne modifie pas la base de donnees
-- **Distribution complete**:
-  - decrement stock
-  - insertion `MvtStock(typeMvt='distribution')`
-  - `besoins.status = 'dispatche'`
-- **Distribution partielle**:
-  - decrement stock
-  - insertion `MvtStock(typeMvt='distribution')`
-  - `besoins.quantite` remplacee par la quantite restante
-  - `status` reste `non_dispatche`
+1. `sql/16022026-01-schema.sql`
+   - recree la base via `DROP DATABASE IF EXISTS`
+   - cree toutes les tables/index
+2. `sql/16022026-02-init-data.sql`
+   - charge les referentiels de depart
+   - charge la configuration frais achat
+   - charge les donnees initiales (dons, stock, mouvements, besoins)
+   - inclut `Argent` / `Ar`
+3. `sql/16022026-03-test-data-distribution.sql`
+   - jeu de donnees test (dons nature + argent, besoins, stock, mouvements)
 
-## 7) Routes HTTP
+## 8) Routes HTTP
 
-Definies dans `app/config/routes.php`.
+Base: `app/config/routes.php`
 
-- `GET /` -> redirection vers `/distribution`
-- `GET /distribution`
-- `POST /distribution/simuler`
-- `POST /distribution/valider`
+- `GET /` -> redirection `/dashboard`
+
+### Dashboard
+- `GET /dashboard`
+
+### Referentiels
+- `GET /referentiels`
+- `POST /referentiels/regions/ajouter`
+- `POST /referentiels/regions/modifier`
+- `POST /referentiels/regions/supprimer`
+- `POST /referentiels/villes/ajouter`
+- `POST /referentiels/villes/modifier`
+- `POST /referentiels/villes/supprimer`
+- `POST /referentiels/categories/ajouter`
+- `POST /referentiels/categories/modifier`
+- `POST /referentiels/categories/supprimer`
+- `POST /referentiels/produits/ajouter`
+- `POST /referentiels/produits/modifier`
+- `POST /referentiels/produits/supprimer`
+- `POST /referentiels/unites/ajouter`
+- `POST /referentiels/unites/modifier`
+- `POST /referentiels/unites/supprimer`
+- `POST /referentiels/types-parametre-achat/ajouter`
+- `POST /referentiels/types-parametre-achat/modifier`
+- `POST /referentiels/types-parametre-achat/supprimer`
+- `POST /referentiels/parametres-achat/ajouter`
+- `POST /referentiels/parametres-achat/modifier`
+- `POST /referentiels/parametres-achat/supprimer`
+
+### Dons / Besoins
+- `GET /dons`
+- `POST /dons`
+- `GET /besoins`
+- `POST /besoins`
+
+### Stock
 - `GET /stock/initialisation`
 - `POST /stock/initialisation`
 - `GET /stock/consultation`
-- `GET /dashboard`
-- `GET /besoins`
-- `POST /besoins`
-- `GET /dons`
-- `POST /dons`
 
-Gestion erreurs:
-- `notFound` -> `app/views/errors/404.php`
-- `error` -> `app/views/errors/500.php`
+### Distribution manuelle
+- `GET /distribution`
+- `POST /distribution`
 
-## 8) Demarrage local
+### Simulation / Validation dispatch
+- `GET /simulation-dispatch`
+- `POST /simulation-dispatch/simuler`
+- `POST /simulation-dispatch/valider`
+- `POST /simulation-dispatch/reinitialiser`
+
+### Achats
+- `GET /achats`
+- `POST /achats`
+
+### Recapitulation
+- `GET /recapitulation`
+- `GET /recapitulation/donnees` (Ajax JSON)
+
+### Erreurs
+- notFound -> `app/views/errors/404.php`
+- error -> `app/views/errors/500.php`
+
+## 9) Affichage mutualise
+
+Helpers centralises dans `app/config/vue_helpers.php`:
+- `vue_echapper(...)`
+- `vue_formater_nombre(...)`
+- `vue_formater_quantite(..., unite)`
+- `vue_formater_montant_ar(...)`
+- `vue_formater_prix_unitaire_ar(...)`
+- `vue_formater_date_humaine(..., bool $inclureHeure = true)`
+
+Effets:
+- quantites avec unite (ex: `20,00 kg`)
+- dates humaines (ex: `12 fev 2026 09:30`)
+- montants/prix en `Ar`
+
+## 10) Demarrage local
 
 ### Prerequis
-
 - PHP 8+
 - MySQL/MariaDB
 - Composer
-- Apache avec `mod_rewrite` recommande
+- Apache + `mod_rewrite`
 
 ### Installation
 
@@ -190,121 +287,37 @@ Gestion erreurs:
 composer install
 ```
 
-Configurer la DB dans `app/config/config.php`:
-- `host`
-- `dbname`
-- `user`
-- `password`
+Configurer la BD dans `app/config/config.php`.
 
-### Import SQL (exemple)
+### Import SQL
 
 ```bash
 mysql -u root -p < sql/16022026-01-schema.sql
 mysql -u root -p < sql/16022026-02-init-data.sql
+mysql -u root -p < sql/16022026-03-test-data-distribution.sql
 ```
 
-### URL d'acces
-
-Le projet est configure pour une entree racine via `index.php` + `.htaccess`.
-Exemple:
+### URL locale (exemple)
 
 `http://localhost/l2/examens/fev/examen-finale-s3/`
 
-## 9) Configuration URL (important en FTP)
+## 11) Configuration URL (local/FTP)
 
 Fichier: `app/config/constant.php`
 
-- `BASE_URL` est calculee automatiquement depuis `$_SERVER['SCRIPT_NAME']`
-- override possible via variable d'environnement:
-  - `APP_BASE_URL`
+- `BASE_URL` auto-calcule via `$_SERVER['SCRIPT_NAME']`
+- surcharge possible via variable d'environnement `APP_BASE_URL`
 
-Exemple:
-`APP_BASE_URL=http://mon-serveur/chemin/projet/`
+## 12) Workflow git equipe
 
-Utiliser cet override si l'hebergement produit des URLs incorrectes.
-
-## 10) UI / Frontend
-
-- Layout global: `app/views/layout.php`
-- Styles globaux: `assets/css/app.css`
-- Theme:
-  - switch clair/sombre
-  - persistance via `localStorage`
-  - script: `assets/js/theme.js`
-- Dashboard details ville:
-  - bouton "Voir details" par ligne
-  - lightbox sur la zone contenu (hors sidebar)
-  - script: `assets/js/dashboard-details.js`
-- Distribution:
-  - bouton `Simuler` pour afficher la projection
-  - bouton `Valider le dispatch` pour appliquer les mouvements reels
-
-## 11) Securite HTTP
-
-Middleware: `app/middlewares/SecurityHeadersMiddleware.php`
-
-- CSP avec nonce dynamique (`csp_nonce`) pour scripts inline necessaires
-- X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc.
-
-Si vous ajoutez un script inline dans une vue, utiliser le nonce:
-- `nonce="<?= htmlspecialchars((string) Flight::get('csp_nonce'), ENT_QUOTES, 'UTF-8') ?>"`
-
-## 12) Git workflow du projet
-
-Regle appliquee:
+Regles:
 - pas de commit direct sur `main`
 - pas de commit direct sur `DEV`
-- travail sur `feature/*`, merge vers `DEV`, puis release vers `main`
+- travail sur `feature/*` -> merge vers `DEV` -> release vers `main`
 
 Script utilitaire: `git.sh`
 
-Exemples:
+## 13) Limitations connues
 
-```bash
-./git.sh nouvelle-feature 11-amelioration-x
-./git.sh fusion-dev feature/11-amelioration-x
-./git.sh release-main "release(main): amelioration x"
-```
-
-Push initial:
-
-```bash
-./git.sh push-initial https://github.com/<compte>/<repo>.git
-```
-
-## 13) Guide de modification rapide (pour IA/dev)
-
-Pour ajouter une fonctionnalite:
-
-1. Ajouter/adapter requetes SQL dans un `Repository`.
-2. Ajouter logique metier dans le `Service`.
-3. Exposer via `Controller`.
-4. Ajouter/adapter vue dans `app/views/...`.
-5. Declarer route dans `app/config/routes.php`.
-6. Si schema impacte:
-   - ajouter script SQL versionne dans `sql/`.
-7. Mettre a jour `todo` et `README.md`.
-
-## 14) Points d'attention / limitations
-
-- Le dashboard "dons distribues par ville" est base sur les besoins `status='dispatche'`.
-  - Limitation structurelle: `MvtStock` ne contient pas `idVille` ni `idBesoin`.
-- Pas de suite de tests automatises pour l'instant.
-- `docker-compose.yml` provient du skeleton initial et cible `public/`.
-  - Le projet courant utilise une entree racine (`index.php` a la racine).
-  - Adapter la commande Docker si vous voulez l'utiliser.
-- `vendor/` est versionne dans ce projet.
-
-## 15) Fichiers clefs a lire en premier
-
-Si vous reprenez le projet, lisez dans cet ordre:
-
-1. `app/config/routes.php`
-2. `app/services/DistributionService.php`
-3. `app/services/StockService.php`
-4. `app/services/DonService.php`
-5. `app/services/BesoinService.php`
-6. `app/services/DashboardService.php`
-7. `app/views/layout.php`
-8. `app/views/dashboard/index.php`
-9. `sql/16022026-01-schema.sql`
+- Le calcul des montants de recapitulation repose sur l'etat actuel des besoins + achats saisis.
+- Pas de tests automatises (unitaires/integration) pour le moment.
