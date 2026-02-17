@@ -3,26 +3,6 @@
 /** @var string $message_succes */
 /** @var string $message_erreur */
 
-$echapper = static function ($valeur): string {
-    return htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
-};
-
-$formaterNombre = static function (float $valeur): string {
-    return number_format($valeur, 2, ',', ' ');
-};
-
-$formaterDate = static function ($valeur): string {
-    $date = (string) $valeur;
-    if ($date === '') {
-        return '-';
-    }
-    $horodatage = strtotime($date);
-    if ($horodatage === false) {
-        return $date;
-    }
-    return date('d/m/Y H:i', $horodatage);
-};
-
 $produits = $donnees['produits'] ?? [];
 $unites = $donnees['unites'] ?? [];
 $donsRecents = $donnees['dons_recents'] ?? [];
@@ -40,13 +20,13 @@ $resume = $donnees['resume'] ?? [];
 
 <?php if ($message_succes !== ''): ?>
     <div class="alert alert-success border-0 shadow-sm" role="alert">
-        <i class="fa-solid fa-circle-check me-2"></i><?= $echapper($message_succes) ?>
+        <i class="fa-solid fa-circle-check me-2"></i><?= vue_echapper($message_succes) ?>
     </div>
 <?php endif; ?>
 
 <?php if ($message_erreur !== ''): ?>
     <div class="alert alert-danger border-0 shadow-sm" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i><?= $echapper($message_erreur) ?>
+        <i class="fa-solid fa-triangle-exclamation me-2"></i><?= vue_echapper($message_erreur) ?>
     </div>
 <?php endif; ?>
 
@@ -60,7 +40,7 @@ $resume = $donnees['resume'] ?? [];
     <div class="col-sm-6 col-xl-3">
         <article class="stat-card stat-ok">
             <p class="stat-label"><i class="fa-solid fa-cubes me-1"></i>Quantite totale recue</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
         </article>
     </div>
 </div>
@@ -70,14 +50,14 @@ $resume = $donnees['resume'] ?? [];
         <h2 class="section-title">Nouveau don</h2>
     </div>
     <div class="p-3 p-lg-4">
-        <form method="post" action="<?= $echapper(BASE_URL . 'dons') ?>" class="row g-3">
+        <form method="post" action="<?= vue_echapper(BASE_URL . 'dons') ?>" class="row g-3">
             <div class="col-md-4">
                 <label for="id_produit" class="form-label">Produit</label>
                 <select id="id_produit" name="id_produit" class="form-select" required>
                     <option value="">Selectionner un produit</option>
                     <?php foreach ($produits as $produit): ?>
                         <option value="<?= (int) ($produit['idProduit'] ?? 0) ?>">
-                            <?= $echapper(($produit['produit'] ?? '') . ' - ' . ($produit['categorie'] ?? '')) ?>
+                            <?= vue_echapper(($produit['produit'] ?? '') . ' - ' . ($produit['categorie'] ?? '')) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -88,7 +68,7 @@ $resume = $donnees['resume'] ?? [];
                     <option value="">Selectionner une unite</option>
                     <?php foreach ($unites as $unite): ?>
                         <option value="<?= (int) ($unite['idUnite'] ?? 0) ?>">
-                            <?= $echapper($unite['nom'] ?? '') ?>
+                            <?= vue_echapper($unite['nom'] ?? '') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -152,7 +132,6 @@ $resume = $donnees['resume'] ?? [];
                 <tr>
                     <th>#</th>
                     <th>Produit</th>
-                    <th>Unite</th>
                     <th class="text-end">Quantite</th>
                     <th>Donateur</th>
                     <th>Date don</th>
@@ -162,11 +141,10 @@ $resume = $donnees['resume'] ?? [];
                 <?php foreach ($donsRecents as $don): ?>
                     <tr>
                         <td><?= (int) ($don['idDon'] ?? 0) ?></td>
-                        <td class="fw-semibold"><?= $echapper($don['produit'] ?? '') ?></td>
-                        <td><?= $echapper($don['unite'] ?? '') ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($don['quantite'] ?? 0)) ?></td>
-                        <td><?= $echapper($don['donateur'] ?? 'Donateur anonyme') ?></td>
-                        <td><?= $echapper($formaterDate($don['dateDon'] ?? '')) ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($don['produit'] ?? '') ?></td>
+                        <td class="text-end"><?= vue_formater_quantite((float) ($don['quantite'] ?? 0), (string) ($don['unite'] ?? '')) ?></td>
+                        <td><?= vue_echapper($don['donateur'] ?? 'Donateur anonyme') ?></td>
+                        <td><?= vue_echapper(vue_formater_date_humaine($don['dateDon'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

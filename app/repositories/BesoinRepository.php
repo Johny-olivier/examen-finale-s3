@@ -72,7 +72,13 @@ class BesoinRepository
                     b.idProduit,
                     p.nom AS produit,
                     p.prixUnitaire,
-                    b.quantite,
+                    CASE
+                        WHEN b.status = 'non_dispatche' THEN LEAST(
+                            b.quantite,
+                            GREATEST(b.quantiteInitiale - COALESCE(a.totalAchete, 0), 0)
+                        )
+                        ELSE b.quantiteInitiale
+                    END AS quantite,
                     b.idUnite,
                     u.nom AS unite,
                     b.status,
@@ -81,7 +87,15 @@ class BesoinRepository
                 JOIN ville v ON v.idVille = b.idVille
                 JOIN regions r ON r.idRegion = v.idRegion
                 JOIN produit p ON p.idProduit = b.idProduit
-                JOIN unite u ON u.idUnite = b.idUnite";
+                JOIN unite u ON u.idUnite = b.idUnite
+                LEFT JOIN (
+                    SELECT
+                        ac.idBesoin,
+                        SUM(ac.quantite) AS totalAchete
+                    FROM achats ac
+                    WHERE ac.statut = 'saisi'
+                    GROUP BY ac.idBesoin
+                ) a ON a.idBesoin = b.idBesoin";
 
         $parametres = [];
         if ($idVille !== null && $idVille > 0) {
@@ -103,17 +117,17 @@ class BesoinRepository
     ): void {
         if ($dateBesoin !== null && $dateBesoin !== '') {
             $this->baseDeDonnees->runQuery(
-                "INSERT INTO besoins(idVille, idProduit, quantite, idUnite, status, date)
-                VALUES (?, ?, ?, ?, 'non_dispatche', ?)",
-                [$idVille, $idProduit, $quantite, $idUnite, $dateBesoin]
+                "INSERT INTO besoins(idVille, idProduit, quantite, quantiteInitiale, idUnite, status, date)
+                VALUES (?, ?, ?, ?, ?, 'non_dispatche', ?)",
+                [$idVille, $idProduit, $quantite, $quantite, $idUnite, $dateBesoin]
             );
             return;
         }
 
         $this->baseDeDonnees->runQuery(
-            "INSERT INTO besoins(idVille, idProduit, quantite, idUnite, status)
-            VALUES (?, ?, ?, ?, 'non_dispatche')",
-            [$idVille, $idProduit, $quantite, $idUnite]
+            "INSERT INTO besoins(idVille, idProduit, quantite, quantiteInitiale, idUnite, status)
+            VALUES (?, ?, ?, ?, ?, 'non_dispatche')",
+            [$idVille, $idProduit, $quantite, $quantite, $idUnite]
         );
     }
 }

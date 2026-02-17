@@ -12,6 +12,7 @@ $app = Flight::app();
 $config = require('config.php');
 
 require('services.php');
+require('vue_helpers.php');
 
 $router = $app->router();
 

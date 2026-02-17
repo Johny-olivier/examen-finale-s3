@@ -3,14 +3,6 @@
 /** @var string $message_succes */
 /** @var string $message_erreur */
 
-$echapper = static function ($valeur): string {
-    return htmlspecialchars((string) $valeur, ENT_QUOTES, 'UTF-8');
-};
-
-$formaterNombre = static function (float $valeur): string {
-    return number_format($valeur, 2, ',', ' ');
-};
-
 $produits = $donnees['produits'] ?? [];
 $unites = $donnees['unites'] ?? [];
 $stockDetaille = $donnees['stock_detaille'] ?? [];
@@ -28,13 +20,13 @@ $resume = $donnees['resume'] ?? [];
 
 <?php if ($message_succes !== ''): ?>
     <div class="alert alert-success border-0 shadow-sm" role="alert">
-        <i class="fa-solid fa-circle-check me-2"></i><?= $echapper($message_succes) ?>
+        <i class="fa-solid fa-circle-check me-2"></i><?= vue_echapper($message_succes) ?>
     </div>
 <?php endif; ?>
 
 <?php if ($message_erreur !== ''): ?>
     <div class="alert alert-danger border-0 shadow-sm" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i><?= $echapper($message_erreur) ?>
+        <i class="fa-solid fa-triangle-exclamation me-2"></i><?= vue_echapper($message_erreur) ?>
     </div>
 <?php endif; ?>
 
@@ -48,7 +40,7 @@ $resume = $donnees['resume'] ?? [];
     <div class="col-sm-6 col-xl-3">
         <article class="stat-card stat-ok">
             <p class="stat-label"><i class="fa-solid fa-cubes me-1"></i>Quantite totale</p>
-            <p class="stat-value"><?= $formaterNombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
+            <p class="stat-value"><?= vue_formater_nombre((float) ($resume['quantite_totale'] ?? 0)) ?></p>
         </article>
     </div>
 </div>
@@ -58,14 +50,14 @@ $resume = $donnees['resume'] ?? [];
         <h2 class="section-title">Formulaire d'initialisation</h2>
     </div>
     <div class="p-3 p-lg-4">
-        <form method="post" action="<?= $echapper(BASE_URL . 'stock/initialisation') ?>" class="row g-3">
+        <form method="post" action="<?= vue_echapper(BASE_URL . 'stock/initialisation') ?>" class="row g-3">
             <div class="col-md-5">
                 <label for="id_produit" class="form-label">Produit</label>
                 <select class="form-select" id="id_produit" name="id_produit" required>
                     <option value="">Selectionner un produit</option>
                     <?php foreach ($produits as $produit): ?>
                         <option value="<?= (int) ($produit['idProduit'] ?? 0) ?>">
-                            <?= $echapper(($produit['produit'] ?? '') . ' - ' . ($produit['categorie'] ?? '')) ?>
+                            <?= vue_echapper(($produit['produit'] ?? '') . ' - ' . ($produit['categorie'] ?? '')) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -76,7 +68,7 @@ $resume = $donnees['resume'] ?? [];
                     <option value="">Selectionner une unite</option>
                     <?php foreach ($unites as $unite): ?>
                         <option value="<?= (int) ($unite['idUnite'] ?? 0) ?>">
-                            <?= $echapper($unite['nom'] ?? '') ?>
+                            <?= vue_echapper($unite['nom'] ?? '') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -121,7 +113,6 @@ $resume = $donnees['resume'] ?? [];
                 <tr>
                     <th>idProduit</th>
                     <th>Produit</th>
-                    <th>Unite</th>
                     <th class="text-end">Quantite disponible</th>
                 </tr>
                 </thead>
@@ -129,9 +120,8 @@ $resume = $donnees['resume'] ?? [];
                 <?php foreach ($stockDetaille as $ligne): ?>
                     <tr>
                         <td><?= (int) ($ligne['idProduit'] ?? 0) ?></td>
-                        <td class="fw-semibold"><?= $echapper($ligne['produit'] ?? '') ?></td>
-                        <td><?= $echapper($ligne['unite'] ?? '') ?></td>
-                        <td class="text-end"><?= $formaterNombre((float) ($ligne['quantite'] ?? 0)) ?></td>
+                        <td class="fw-semibold"><?= vue_echapper($ligne['produit'] ?? '') ?></td>
+                        <td class="text-end"><?= vue_formater_quantite((float) ($ligne['quantite'] ?? 0), (string) ($ligne['unite'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
